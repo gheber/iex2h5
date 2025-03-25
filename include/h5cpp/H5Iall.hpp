@@ -161,7 +161,7 @@ namespace h5 { namespace impl { namespace detail {
 		};
 
 		template <class V> at_t operator=( V arg  );
-		template <class V> at_t operator=( const std::initializer_list<V> args  ){};
+		template <class V> at_t operator=( const std::initializer_list<V> args  ){ return V();};
 
 		::hid_t ds;
 		std::string name;
