@@ -15,6 +15,8 @@
 
 #ifndef AN_INTERFACE_H
 #define	AN_INTERFACE_H
+	#include "consumer.hpp"
+	#include "consumer_impl.hpp"
 	#include "producer.hpp"
 	#include "producer_impl.hpp"
 #endif	/* INTERFACES_H */
