@@ -13,8 +13,9 @@
  *   _________________________________________________________________________________
  */
 
-#ifndef AN_INTERFACE_H
-#define	AN_INTERFACE_H
-	#include "producer.hpp"
-	#include "producer_impl.hpp"
-#endif	/* INTERFACES_H */
+#ifndef IEX_PRODUCER_H87972453
+#define IEX_PRODUCER_H87972453
+	#include "protocol"
+	#include "producers/transport.hpp"
+	#include "producers/pcap.hpp"
+#endif
