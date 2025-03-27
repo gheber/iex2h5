@@ -34,7 +34,7 @@ CXXFLAGS =  -I ../include -I/usr/local/include `pkg-config --cflags hdf5` -std=c
 %.o : $(SRC_DIR)/%.cpp 
 	$(CXX) -$(INCLUDES) -o $@  $(CPPFLAGS) $(CXXFLAGS) -c $^
 
-iex2h5: $(app).o consumer_asset.o consumer_irts.o consumer_rts.o consumer_index.o
+iex2h5: $(app).o consumer_init.o consumer_irts.o consumer_rts.o consumer_index.o
 	$(CXX) $^ $(LIBS) -Wl,-rpath=$(pwd)  -o $@ 	
 
 all: $(app) 

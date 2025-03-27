@@ -16,7 +16,7 @@
 #ifndef IEX_CONSUMER_H
 #define IEX_CONSUMER_H
 	#include "consumers/example.hpp"
-	#include "consumers/assets.hpp"
+	#include "consumers/init.hpp"
 	#include "consumers/rts.hpp"
 	#include "consumers/tick.hpp"
 	#include "consumers/irts.hpp"

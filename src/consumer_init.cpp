@@ -26,24 +26,21 @@
 
 namespace ch = std::chrono;
 
-void save_assets( const std::string input, const std::string output,
-		  const std::string tradingdays_path, const std::string assets_path,
-		  const std::string day_begin, const std::string day_end,  unsigned long interval ){
+void initialise( const std::string input, const std::string output,
+		  const std::string tradingdays_path, const std::string assets_path, const std::string rts_path,
+		  const std::string day_begin_, const std::string day_end_,  unsigned long interval ){
 
-	using Consumer = iex::AssetConsumer<ch::system_clock>;
+	using Consumer = iex::InitConsumer<ch::system_clock>;
 	using Producer = iex::PcapProducer<Consumer>;
 	using duration = typename Consumer::duration;
 	using namespace std::chrono;
 
-	auto start_ = utils::string2duration<duration>(day_begin,"%H:%M:%S");
-	auto stop_  = utils::string2duration<duration>(day_end, "%H:%M:%S");
+	auto start_ = utils::string2duration<duration>(day_begin_,"%H:%M:%S");
+	auto stop_  = utils::string2duration<duration>(day_end_, "%H:%M:%S");
 	auto interval_ = duration_cast<duration>( seconds(interval));
 
 	Producer producer( stdin, interval_ );
-	Consumer consumer(output, tradingdays_path, assets_path);
+	Consumer consumer(output, tradingdays_path, assets_path, rts_path, day_begin_, day_end_, interval);
 
 	io::execute( producer, consumer, start_, interval_,  stop_ );
 }
-
-
-
