@@ -33,8 +33,8 @@ namespace iex {
 			using time_point = typename Clock::time_point;
 			using duration = typename Clock::duration;
 
-		RtsConsumer( const std::string file_path, const std::string tradingdays_path)
-			: file_path(file_path), tradingdays_path(tradingdays_path) {
+		RtsConsumer( const std::string file_path, const std::string tradingdays_path, const std::string rts_path)
+			: file_path(file_path), tradingdays_path(tradingdays_path), rts_path(rts_path) {
 		}
 		void begin(uint64_t I, uint64_t S,  const std::vector<duration>& rts);
 		void trade_report_impl(time_point time,  uint64_t stock, float price, uint64_t size, uint8_t flag);
@@ -46,18 +46,14 @@ namespace iex {
 		void day_end_impl( time_point day );
 
 		uint64_t slot, max_slot;
-
 	private:
-		h5::fd_t fd;
-
-		const std::string file_path, tradingdays_path;
-
+		const std::string file_path, tradingdays_path, rts_path;
 		time_point last_time, today;
 		arma::fmat h5_bid, h5_ask, h5_trade;
 		arma::umat h5_bid_volume, h5_ask_volume, h5_trade_volume;
 		arma::uvec trade_size, trade_count, event_count;
 		arma::fvec avg_trade_count, avg_spread, day_high, day_low, day_close, day_open;
-		std::vector<std::string> rts, start, stop;
+		std::vector<std::string> start, stop;
 		analytics::EMAFilter<Clock> fbid, fask, ftrade;
 	};
 }
@@ -72,16 +68,15 @@ rts - intra day time intervals in durations
 template <class Clock>
 void iex::RtsConsumer<Clock>::begin(uint64_t I, uint64_t S,  const std::vector<duration>& rts){
 	namespace an = analytics;
-	fd = h5::open(file_path, H5F_ACC_RDWR );
+	
 	this->max_slot = S;
 	an::resize(I,S, h5_bid,h5_ask,h5_trade,  h5_bid_volume, h5_ask_volume, h5_trade_volume);
 	an::resize(I,
 		start, stop, 
 		event_count, trade_size, trade_count, fbid, fask, ftrade,
 		avg_trade_count, avg_spread, day_high, day_low, day_close, day_open);
-
-	LOG(INFO) << I << "x" << S <<" " << h5_ask.n_rows <<"x"<<h5_ask.n_cols;
-}
+	LOG(INFO) << I << "x" << S <<" " << h5_ask.n_rows <<"x"<<h5_ask.n_cols << " " << rts.size();
+ }
 
 /**
 maintain trade related statistics
@@ -124,7 +119,6 @@ void iex::RtsConsumer<Clock>::heart_beat_impl( time_point tp ){
 	auto bid   =  h5_bid.unsafe_col(slot);
 
 	auto tp_ = date::format("%H:%M:%S", date::floor<chrono::seconds>(tp));
-	rts.push_back( tp_ );
 	fask.predict( ask ); ftrade.predict( trade ); fbid.predict( bid );
 
 	for(uint64_t i = 0; i < trade.n_rows; i++){
@@ -161,6 +155,8 @@ void iex::RtsConsumer<Clock>::day_end_impl( time_point day ){
 	namespace an = analytics;
 	using namespace date;
 	using namespace std::chrono;
+	h5::fd_t fd = h5::open(file_path, H5F_ACC_RDWR);
+	std::vector<std::string> rts = h5::read<std::vector<std::string>>(fd, rts_path);
 	std::string today = date::format("%F", floor<days>(day));
 	// RTS
 	for( int i=0; i<avg_trade_count.size(); i++){
@@ -173,19 +169,17 @@ void iex::RtsConsumer<Clock>::day_end_impl( time_point day ){
 
 	an::round<VALUE_PRECISION>(h5_ask, h5_trade, h5_bid, avg_trade_count);
 	an::zeros2nans(h5_ask, h5_trade, h5_bid);
-
+	h5::mute();
 	h5::write(fd,"/rts/ask/"	+ today, h5_ask);
 	h5::write(fd,"/rts/bid/"	+ today, h5_bid);
 	h5::write(fd,"/rts/trade/"  + today, h5_trade);
 	h5::write(fd,"/rts/volume/" + today, h5_trade_volume);
-
 	h5::write(fd,"/stats/" + today + "/avg_trade_count", this->avg_trade_count);
 	h5::write(fd,"/stats/" + today + "/trade_count", this->trade_count);
 	h5::write(fd,"/stats/" + today + "/first_trade", this->start);
 	h5::write(fd,"/stats/" + today + "/last_trade", this->stop);
 
-	h5::write(fd,"/time.txt", this->rts);
 	std::cout << today << std::endl;
+	h5::unmute();
 }
 #endif
-
