@@ -12,8 +12,6 @@
  *   Copyright © <2017-2025> Varga Consulting, Toronto, On     info@vargaconsulting.ca
  *   _________________________________________________________________________________
  */
-
-
 #include <armadillo>
 #include <h5cpp/all>
 

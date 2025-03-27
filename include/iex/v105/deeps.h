@@ -15,6 +15,7 @@
 
 #ifndef IEX_DEEPS_H
 #define IEX_DEEPS_H
+#include <cstdint>
 namespace iex { namespace deeps {
 	using header = iex::protocol::header;
 }}

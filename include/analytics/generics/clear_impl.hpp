@@ -12,7 +12,7 @@
  *   Copyright © <2017-2025> Varga Consulting, Toronto, On     info@vargaconsulting.ca
  *   _________________________________________________________________________________
  */
-
+namespace analytics {
 	//STD::VECTOR
 	template <typename T, typename Clock> void resize(size_t N, Filter<T, Clock>& filter){
 		filter.resize(N);

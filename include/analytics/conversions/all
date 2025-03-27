@@ -16,8 +16,6 @@
 #ifndef ANALYTICS_CONVERSIONS_HPP
 #define	ANALYTICS_CONVERSIONS_HPP
 	namespace analytics {
-		#include "stl.hpp"
-		//#include "chrono.hpp"
 	}
 #endif	/* INTERFACES_H */
 

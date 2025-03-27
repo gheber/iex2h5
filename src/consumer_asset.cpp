@@ -12,7 +12,6 @@
  *   Copyright © <2017-2025> Varga Consulting, Toronto, On     info@vargaconsulting.ca
  *   _________________________________________________________________________________
  */
-
 #include <iex/protocol>
 #include <iex/producer>
 #include <iex/consumer>

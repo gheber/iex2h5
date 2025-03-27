@@ -17,9 +17,7 @@
 #define	ANALYTICS_UTILS_HPP
 #include <date/tz.h>
 namespace utils{
-	//#include "parser.hpp"
 	#include "templates.hpp"
-	//#include "rclock.hpp"
 }
 #endif	/* INTERFACES_H */
 
