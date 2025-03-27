@@ -1,8 +1,5 @@
 # IEX2H5: IEX TOPS Dataset to HDF5 Converter
-
 A high-performance C++ utility for converting [IEX Transport Protocol (IEX-TP)][101] packet captures into structured HDF5 datasets, suitable for financial analytics, scientific computation, and time-series processing.
-
----
 
 ## 📦 Installation
 
@@ -12,8 +9,8 @@ A high-performance C++ utility for converting [IEX Transport Protocol (IEX-TP)][
 2. **Install required libraries**
 
 ```bash
-sudo apt install libgtest-dev libhdf5-dev libboost-program-options-dev \
-    libboost-system-dev libgoogle-glog-dev libgoogle-perftools-dev libcpprest-dev libpcap-dev pigz
+sudo apt install libhdf5-dev libboost-program-options-dev \
+    libboost-system-dev libgoogle-glog-dev libcpprest-dev libpcap-dev pigz
 # intall Howard Hinnant's date library
 git clone https://github.com/HowardHinnant/date.git && cd date
 cmake -DBUILD_TZ_LIB=ON . && make && sudo make install
