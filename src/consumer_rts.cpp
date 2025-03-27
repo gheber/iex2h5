@@ -14,8 +14,6 @@
  */
 
 #include <armadillo>
-#include <h5cpp/all>
-
 #include <analytics/utils/all>
 
 #include <iex/protocol>
@@ -33,20 +31,11 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 namespace ch = std::chrono;
-//void init( const std::vector<time_point>& days, const std::vector<std::string>& symbols,
-//			   const std::vector<duration>& rts );
 
 void generate_rts( const std::string input, const std::string output,
-		  const std::string tradingdays_path, const std::string assets_path,
+		  const std::string tradingdays_path, const std::string assets_path, const std::string rts_path,
 		  const std::string day_begin, const std::string day_end,  unsigned long interval ){
-	/*
-	fs::path path(input);
-	
-	if( fs::is_directory(path) )
-		std::cout<< "<dir...>";
-	if( fs::is_regular_file(path))
-		std::cout<<"<file...>";
-*/
+
 	using Consumer = iex::RtsConsumer<ch::system_clock>;
 	using Producer = iex::PcapProducer<Consumer>;
 	using duration = typename Consumer::duration;
@@ -61,7 +50,7 @@ void generate_rts( const std::string input, const std::string output,
 	std::vector<duration> rts = utils::sequence(start_, interval_ ,stop_);
 	std::vector<time_point> td;
 	Producer producer( stdin, interval_ );
-	Consumer consumer(output, tradingdays_path);
-	consumer.init(td, sym, rts );
+	Consumer consumer(output, tradingdays_path, rts_path);
+	consumer.init(td, sym, rts);
 	io::execute( producer, consumer, start_, interval_, stop_ );
 }

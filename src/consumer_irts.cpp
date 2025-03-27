@@ -31,12 +31,9 @@
 #include <exception>
 
 namespace ch = std::chrono;
-//void init( const std::vector<time_point>& days, const std::vector<std::string>& symbols,
-//			   const std::vector<duration>& rts );
-
 void generate_irts( const std::string input, const std::string output,
-		  const std::string tradingdays_path, const std::string assets_path,
-		  const std::string day_begin, const std::string day_end,  unsigned long interval ){
+		  const std::string tradingdays_path, const std::string assets_path, const std::string rts_path,
+		  const std::string day_begin, const std::string day_end,  unsigned long interval) {
 
 	using Consumer = iex::IrtsConsumer<ch::system_clock>;
 	using Producer = iex::PcapProducer<Consumer>;

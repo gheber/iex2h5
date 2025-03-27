@@ -23,37 +23,37 @@
 using namespace std;
 namespace po = boost::program_options;
 // declarations from *.cpp files
-void save_assets( const std::string input, const std::string output,
-		  const std::string days_path, const std::string assets_path,
+void initialise( const std::string input, const std::string output,
+		  const std::string days_path, const std::string assets_path,const std::string rts_path,
 		  const std::string day_begin, const std::string day_end,  unsigned long interval );
 
 void generate_irts( const std::string input, const std::string output,
-		  const std::string days_path, const std::string assets_path,
+		  const std::string days_path, const std::string assets_path, const std::string rts_path,
 		  const std::string day_begin, const std::string day_end,  unsigned long interval );
 
 void generate_rts( const std::string  input, const std::string output,
-		  const std::string days_path, const std::string assets_path,
+		  const std::string days_path, const std::string assets_path,const std::string rts_path,
 		  const std::string day_begin, const std::string day_end,  unsigned long interval );
 
 void generate_index( const std::string input, const std::string output,
-		  const std::string days_path, const std::string assets_path,
+		  const std::string days_path, const std::string assets_path,const std::string rts_path,
 		  const std::string day_begin, const std::string day_end,  unsigned long interval );
 
 
 
 using command = void(const std::string, const std::string, const std::string, const std::string,
-		  const std::string, const std::string,  unsigned long);
+	const std::string, const std::string, const std::string,  unsigned long);
 
 int main(int argc, char **argv) {
 
-	std::string input,output,stream,rts,glog_dir,
-			assets,days,day_begin,day_end,asset_idx,trading_days_idx, cmd;
+	std::string input,output,stream,rts_path,glog_dir,
+			assets_path,days,day_begin,day_end,asset_idx,trading_days_idx, cmd;
 	bool glog_stderr;
     unsigned int glog_minloglevel, time_interval, filter, chunk;
     po::options_description desc("Allowed options",120);
 	// simple dispatch map:
 	std::map<std::string,std::function<command>> dispatch;
-	dispatch["assets"] 	= save_assets;
+	dispatch["init"] 	= initialise;
 	dispatch["irts"] 	= generate_irts;
 	dispatch["rts"] 	= generate_rts;
 	dispatch["index"] 	= generate_index;
@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
 
 			("input,i", po::value<string>(), "packet capture file or when left empty: stdin")
             ("output,o", po::value<string>()->default_value("./iex.h5"), "output hdf5 file")
-            ("rts,r", po::value<string>()->default_value("/time.txt"), "hdf5-group/directory for regular time interval datasets")
+            ("rts-path", po::value<string>()->default_value("/time.txt"), "hdf5-group/directory for regular time interval datasets")
 
 			("asset-path", po::value<string>()->default_value("/instruments.txt"), 
 			 							"path to HDF5 index dataset for listed [symbols|assets|financial] instruments")
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
             ("command", po::value<string>(),
 			 		"irts    - saves captured events as irts stream\n"
 			 		"rts     - converts irts to rts\n"
-					"assets  - retrieves symbols from irts/stream\n"
+					"init    - initialises data with retreived symbols from irts/stream\n"
 					"index   - creates trading days\n"
 					"\n")
 
@@ -105,21 +105,21 @@ int main(int argc, char **argv) {
 			cout << desc << std::endl;
 
             cout <<"\033[1m" "example:" "\033[0m" <<endl;
-            cout <<"   "<< argv[0] <<endl;
+            cout <<"   unpigz -c tops.pcap.gz | " << argv[0] << " -g 9 --time-interval 10 --command init" << endl << endl;
 			cout << "Copyright © <2017-2025> Varga Consulting, Toronto, ON, info@vargaconsulting.ca" << std::endl << std::endl;
             return 0;
         }
 
         output = vm["output"].as<string>();
-        rts = vm["rts"].as<string>();
         filter = vm["gzip"].as<unsigned int>(); chunk  = vm["chunk"].as<unsigned int>();
-
+		
         glog_stderr = vm["glog-stderr"].as<bool>(); glog_dir = vm["glog-dir"].as<string>();
         glog_minloglevel = vm["glog-minloglevel"].as<unsigned int>();
 		cmd = vm["command"].as<string>();
         time_interval = vm["time-interval"].as<unsigned int>();
-		days 	= vm["trading-days-path"].as<std::string>();  	assets 	= vm["asset-path"].as<std::string>();
-		day_begin 	= vm["start"].as<std::string>();  		day_end = vm["stop"].as<std::string>();
+        rts_path = vm["rts-path"].as<string>(); days = vm["trading-days-path"].as<std::string>();
+		assets_path = vm["asset-path"].as<std::string>();
+		day_begin = vm["start"].as<std::string>();  day_end = vm["stop"].as<std::string>();
 
 		FLAGS_log_dir = glog_dir; // initialize before InitGoogleLogging( ... ) is called
 
@@ -134,13 +134,13 @@ int main(int argc, char **argv) {
 #endif
 		if( !vm.count("input") ){
 			try {
-				dispatch[cmd](input, output, days, assets, day_begin, day_end, time_interval );
+				dispatch[cmd](input, output, days, assets_path, rts_path, day_begin, day_end, time_interval );
 			} catch( const std::runtime_error& e ){
 				LOG(INFO) <<"ERROR: " << e.what();
 			}
 		} else {
 			input  = vm["input"].as<string>();
-			dispatch[cmd](input, output, days, assets, day_begin, day_end, time_interval );
+			dispatch[cmd](input, output, days, assets_path, rts_path, day_begin, day_end, time_interval );
 			DLOG(INFO) << input;
 		}
 #ifdef DEBUG

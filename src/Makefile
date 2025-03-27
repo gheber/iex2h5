@@ -34,7 +34,7 @@ CXXFLAGS =  -I ../include -I/usr/local/include `pkg-config --cflags hdf5` -std=c
 %.o : $(SRC_DIR)/%.cpp 
 	$(CXX) -$(INCLUDES) -o $@  $(CPPFLAGS) $(CXXFLAGS) -c $^
 
-iex2h5: $(app).o consumer_asset.o consumer_irts.o consumer_rts.o consumer_index.o
+iex2h5: $(app).o consumer_init.o consumer_irts.o consumer_rts.o consumer_index.o
 	$(CXX) $^ $(LIBS) -Wl,-rpath=$(pwd)  -o $@ 	
 
 all: $(app) 
@@ -44,4 +44,15 @@ install:
 
 clean:
 	@$(RM) *.o *.prof  $(app)
+
+tops_files :=$(sort $(wildcard ../data/*))
+
+# iex-download --tops --from 2017-01-01 --to 2017-01-08
+test-tops: $(app) $(HOME)/iex.h5
+	$(foreach dp, $(tops_files), unpigz -c $(dp) | ./$(app) -g 3 --time-interval 20 --command rts --glog-minloglevel 3 -o $(HOME)/iex.h5; )
+	#./$(app) -o $(HOME)/iex.h5 --command index
+
+$(HOME)/iex.h5: $(app)
+	unpigz -c ../data/TOPS-2017-01-06.pcap.gz | ./$(app) -g 9 --command init -o $(HOME)/iex.h5
+
 .PHONY: 

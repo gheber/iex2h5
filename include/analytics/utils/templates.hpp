@@ -53,13 +53,9 @@ template<typename Duration> Duration string2duration(const std::string& data, co
 	return du;
 }
 
-template<typename Duration> Duration duration2string(const Duration& data, const std::string& fmt ){
+inline std::string duration2string(const std::chrono::system_clock::duration& time_from_midnight){
 	using namespace date;
-	using namespace std;
-	Duration du;
-	std::istringstream in(data);
-	in >> date::parse(fmt, du );
-	return du;
+	std::ostringstream oss;
+	oss << make_time(std::chrono::duration_cast<std::chrono::seconds>(time_from_midnight));
+	return oss.str();
 }
-
-

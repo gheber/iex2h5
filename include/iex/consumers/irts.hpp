@@ -58,10 +58,6 @@ namespace iex {
 		void day_end_impl( time_point day );
 
 		uint64_t slot;
-
-
-		
-
 	private:
 		h5::fd_t fd;
 		std::vector<std::vector<double>> time, trade;
