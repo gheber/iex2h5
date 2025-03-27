@@ -21,7 +21,7 @@ MKL = -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/l
 HDF5 = `pkg-config --libs hdf5`
 
 LIBS =      -lglog  -lprofiler -lpcap -pthread -ldate-tz -lcurl     \
-			-lboost_program_options -lboost_system 					\
+			-lboost_program_options  					\
 			-lm -lz  -ldl -lpthread 							    \
 			$(ARMA)  $(MKL) $(HDF5)						       		\
 
