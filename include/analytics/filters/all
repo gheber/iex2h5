@@ -19,7 +19,6 @@
 namespace analytics{
 	#include "filters.h"
 	#include "ema.hpp"
-	//#include "vema.hpp"
 }
 #endif	/* INTERFACES_H */
 

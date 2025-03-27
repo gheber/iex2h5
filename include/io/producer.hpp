@@ -12,13 +12,12 @@
  *   Copyright © <2017-2025> Varga Consulting, Toronto, On     info@vargaconsulting.ca
  *   _________________________________________________________________________________
  */
+#ifndef IO_PRODUCER_HPP
+#define IO_PRODUCER_HPP
 
 #include <chrono>
 #include <date/tz.h>
 #include <cstddef>
-
-#ifndef IO_PRODUCER_HPP
-#define IO_PRODUCER_HPP
 namespace io {
 	/** Base class to consume High Frequency Trading events, must be used in CRTP fashion \ingroup IO
 	 */

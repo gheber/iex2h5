@@ -12,14 +12,12 @@
  *   Copyright © <2017-2025> Varga Consulting, Toronto, On     info@vargaconsulting.ca
  *   _________________________________________________________________________________
  */
+#ifndef IO_PRODUCER_IMPL_HPP
+#define IO_PRODUCER_IMPL_HPP
 
 #include <chrono>
 #include <date/tz.h>
 #include <cstddef>
-
-#ifndef IO_PRODUCER_IMPL_HPP
-#define IO_PRODUCER_IMPL_HPP
-
 
 template <typename Derived, typename Consumer>
 void io::Producer<Derived,Consumer>::run( Consumer& ref, duration start_, duration stop_ ){

@@ -17,7 +17,7 @@ cmake -DBUILD_TZ_LIB=ON . && make && sudo make install
 ```
 # Example Usage: Convert IEX TOPS Dataset
 ```
-steven@jupyter:~/projects/iex2h5$ iex2h5 --help
+steven@jupyter:~/projects/iex2h5/src$ ./iex2h5 --help
 IEX2H5 converts IEX TOPS Datasets to HDF5 Format
 
 iex2h5 is a specialized tool for importing IEX TOPS datasets into the HDF5 data format,
@@ -28,34 +28,30 @@ programming languages including Julia, Python, MATLAB, C, C++, and Node.js.
 This application allows users to convert captured packet data streams (e.g., DEEP/TOPS)
 into structured HDF5 datasets for advanced analytics and seamless integration into
 scientific, engineering, and financial workflows.
-Allowed options:
-  --time-interval arg (=10)                    temporal interval in seconds, irts stream is converted into
-  --start arg (=14:30:00)                      lower bound on processing data stream 
-  --stop arg (=21:00:00)                       upper bound on processing stream
-                                               
-  -i [ --input ] arg                           packet capture file or when left empty: stdin
-  -o [ --output ] arg (=./iex.h5)              output hdf5 file
-  -r [ --rts ] arg (=/time.txt)                hdf5-group/directory for regular time interval datasets
-  --asset-path arg (=/instruments.txt)         path to HDF5 index dataset for listed [symbols|assets|financial] 
-                                               instruments
-  --trading-days-path arg (=/trading_days.txt) path to HDF5 dataset containing the list of trading days
-  -g [ --gzip ] arg (=0)                       0-9 0 for no compression, 9 for highest
-  -c [ --chunk ] arg (=1)                      number of days in blocks/hdf5-chunks, 0 no-chunks 
-                                               
-                                               
-  --command arg                                irts    - saves captured events as irts stream
-                                               rts     - converts irts to rts
-                                               assets  - retrieves symbols from irts/stream
-                                               index   - creates trading days
-                                               
-                                               
-  --glog-dir arg (=./)                         glog output directory
-  --glog-stderr arg (=1)                       glog output to stderr if true
-  --glog-minloglevel arg (=0)                  glog log level:  INFO=0 WARNING=1 ERROR=2 FATAL=3
-                                               
-  -h [ --help ]                                produce help message
+
+Usage: ./iex2h5 [--help] [--time-interval VAR] [--start VAR] [--stop VAR] [--output VAR] [--rts-path VAR] [--instruments-path VAR] [--trading-days-path VAR] [--gzip VAR] [--command VAR]
+
+Optional arguments:
+  -h, --help           shows help message 
+  --time-interval      temporal interval in seconds, irts stream is converted into [nargs=0..1] [default: 10]
+  --start              lower bound in UTC, considers events only after [nargs=0..1] [default: "14:30:00"]
+  --stop               upper bound in UTC, considers events only before [nargs=0..1] [default: "21:00:00"]
+  -o, --output         path to the HDF5 container [nargs=0..1] [default: "./iex.h5"]
+  --rts-path           hdf5-group/directory for regular time interval index [nargs=0..1] [default: "/time.txt"]
+  --instruments-path   hdf5-group/directory for listed [symbols|assets|financial] instruments [nargs=0..1] [default: "/instruments.txt"]
+  --trading-days-path  hdf5-group/directory for active trading days [nargs=0..1] [default: "/trading_days.txt"]
+  -g, --gzip           0-9 0 for no compression, 9 for highest [nargs=0..1] [default: 0]
+  -c, --command        init  - intitialises hdf5 container with retrieved symbols from irts/stream
+                       irts  - saves captured events as irts stream
+                       rts   - converts irts to rts
+                       index - scans and rebuilds trading day index
+                       
+ [nargs=0..1] [default: "rts"]
+
 
 example:
-   iex2h5
+   unpigz -c tops.pcap.gz | ./iex2h5 -g 9 --time-interval 10 --command init
+   for file in repo/*.pcap.gz; do unpigz -c ${file} | iex2h5 -g 9 --command rts -o ${HOME}/iex.h5;
+
 Copyright © <2017-2025> Varga Consulting, Toronto, ON, info@vargaconsulting.ca
 ```

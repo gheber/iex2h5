@@ -14,6 +14,7 @@
  */
 #ifndef IEX_TOPS163_H
 #define IEX_TOPS163_H
+#include <cstdint>
 namespace iex { namespace tops {
 	using header = iex::protocol::header;
 }}

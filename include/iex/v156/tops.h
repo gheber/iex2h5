@@ -14,6 +14,7 @@
  */
 #ifndef IEX_TOPS156_H
 #define IEX_TOPS156_H
+#include <cstdint>
 namespace iex::tops {
 	/**
 	 * price: 8byte int fixed 4 digit decimal

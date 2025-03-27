@@ -22,11 +22,9 @@ template <typename Clock>
 struct EMAFilter : public Filter<EMAFilter<Clock>, Clock> {
 	using time_point = typename Clock::time_point;
 
-//	EMAFilter():factor(2.0 / (SIGNAL_DELAY_FILTER_EMA+1.0)){}
 	EMAFilter():factor(.05){}
 	// ultra high frequency update 
 	void update_impl(time_point time, uint64_t  stock, float price, uint64_t volume){
-		//std::cout << std::dec << stock <<" "<<price << " " << volume << "\n";
 		if( this->price[stock] > 0 )
 			this->price[stock] = factor * price + (1.0 - factor) * this->price[stock];
 		else
