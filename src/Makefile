@@ -20,7 +20,7 @@ ARMA = `pkg-config --libs armadillo`
 MKL = -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl
 HDF5 = `pkg-config --libs hdf5`
 
-LIBS =      -lglog  -lprofiler -lpcap -pthread -ldate-tz -lcurl     \
+LIBS =       -lprofiler -lpcap -pthread -ldate-tz -lcurl     \
 			-lboost_program_options -lboost_system 					\
 			-lm -lz  -ldl -lpthread 							    \
 			$(ARMA)  $(MKL) $(HDF5)						       		\

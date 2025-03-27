@@ -16,7 +16,6 @@
 #include <chrono>
 #include <date/tz.h>
 #include <cstddef>
-#include <glog/logging.h>
 #include <analytics/all>
 
 #ifndef IO_EXECUTE_HPP

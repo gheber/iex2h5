@@ -20,12 +20,7 @@
 #include <vector>
 #include <io/interface>
 #include <date/tz.h>
-#include <glog/logging.h>
 #include <unordered_map>
-
-using namespace std;
-using namespace date;
-
 namespace iex {
 	namespace ch = std::chrono;
 	template <class Clock> struct IOStreamConsumer :

@@ -12,12 +12,9 @@
  *   Copyright © <2017-2025> Varga Consulting, Toronto, On     info@vargaconsulting.ca
  *   _________________________________________________________________________________
  */
-
-//#include <mpi.h>
+#include <sigma/error.hpp>
 #include <vector>
-#include <glog/logging.h>
 #include <boost/program_options.hpp>
-#include <gperftools/profiler.h>
 #include <iostream>
 
 using namespace std;
@@ -46,10 +43,9 @@ using command = void(const std::string, const std::string, const std::string, co
 
 int main(int argc, char **argv) {
 
-	std::string input,output,stream,rts,glog_dir,
+	std::string input,output,stream,rts,
 			assets,days,day_begin,day_end,asset_idx,trading_days_idx, cmd;
-	bool glog_stderr;
-    unsigned int glog_minloglevel, time_interval, filter, chunk;
+    unsigned int time_interval, filter, chunk;
     po::options_description desc("Allowed options",120);
 	// simple dispatch map:
 	std::map<std::string,std::function<command>> dispatch;
@@ -82,9 +78,6 @@ int main(int argc, char **argv) {
 					"index   - creates trading days\n"
 					"\n")
 
-			("glog-dir", po::value<string>()->default_value("./"),"glog output directory") 
-            ("glog-stderr", po::value<bool>()->default_value(true),"glog output to stderr if true") 
-            ("glog-minloglevel", po::value<unsigned int>()->default_value(0),"glog log level:  INFO=0 WARNING=1 ERROR=2 FATAL=3\n")
             ("help,h", "produce help message")
             ;
     try {
@@ -114,21 +107,11 @@ int main(int argc, char **argv) {
         rts = vm["rts"].as<string>();
         filter = vm["gzip"].as<unsigned int>(); chunk  = vm["chunk"].as<unsigned int>();
 
-        glog_stderr = vm["glog-stderr"].as<bool>(); glog_dir = vm["glog-dir"].as<string>();
-        glog_minloglevel = vm["glog-minloglevel"].as<unsigned int>();
 		cmd = vm["command"].as<string>();
         time_interval = vm["time-interval"].as<unsigned int>();
 		days 	= vm["trading-days-path"].as<std::string>();  	assets 	= vm["asset-path"].as<std::string>();
 		day_begin 	= vm["start"].as<std::string>();  		day_end = vm["stop"].as<std::string>();
 
-		FLAGS_log_dir = glog_dir; // initialize before InitGoogleLogging( ... ) is called
-
-        google::InitGoogleLogging( argv[0] );
-
-        FLAGS_logtostderr = glog_stderr;
-        FLAGS_logbufsecs = 1;
-        FLAGS_minloglevel = glog_minloglevel;
-        FLAGS_alsologtostderr = glog_stderr;
 #ifdef DEBUG
 		ProfilerStart( (std::string(argv[0]) + std::string(".prof")).data() );
 #endif
@@ -136,12 +119,12 @@ int main(int argc, char **argv) {
 			try {
 				dispatch[cmd](input, output, days, assets, day_begin, day_end, time_interval );
 			} catch( const std::runtime_error& e ){
-				LOG(INFO) <<"ERROR: " << e.what();
+				INFO << "ERROR: " << e.what() << std::endl;
 			}
 		} else {
 			input  = vm["input"].as<string>();
 			dispatch[cmd](input, output, days, assets, day_begin, day_end, time_interval );
-			DLOG(INFO) << input;
+			INFO << input << std::endl;
 		}
 #ifdef DEBUG
 		ProfilerStop();

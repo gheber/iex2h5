@@ -21,7 +21,6 @@
 #include <io/interface>
 #include <analytics/all>
 #include <date/tz.h>
-#include <glog/logging.h>
 #include <algorithm>
 #include <armadillo>
 #include <h5cpp/all>
@@ -80,7 +79,7 @@ void iex::RtsConsumer<Clock>::begin(uint64_t I, uint64_t S,  const std::vector<d
 		event_count, trade_size, trade_count, fbid, fask, ftrade,
 		avg_trade_count, avg_spread, day_high, day_low, day_close, day_open);
 
-	LOG(INFO) << I << "x" << S <<" " << h5_ask.n_rows <<"x"<<h5_ask.n_cols;
+	INFO << I << "x" << S <<" " << h5_ask.n_rows <<"x"<<h5_ask.n_cols << std::endl;
 }
 
 /**

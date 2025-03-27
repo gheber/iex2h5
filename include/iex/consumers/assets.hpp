@@ -20,7 +20,7 @@
 #include <vector>
 #include <io/interface>
 #include <date/tz.h>
-#include <glog/logging.h>
+#include <sigma/error.hpp>
 #include <h5cpp/all>
 #include <map>
 
@@ -70,7 +70,7 @@ void iex::AssetConsumer<Clock>::day_begin_impl( time_point day ){
 }
 template <class Clock>
 void iex::AssetConsumer<Clock>::day_end_impl( time_point day ){
-	LOG(INFO) << map.size();
+	INFO << map.size() << std::endl;
 	std::vector<std::string> assets;
 	for(auto i:map ) assets.push_back( i.first );
 	std::sort(assets.begin(), assets.end());

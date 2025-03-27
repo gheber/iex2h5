@@ -22,8 +22,6 @@
 	#include <iex/consumer>
 #include <h5cpp/io>
 
-#include <gtest/gtest.h>
-#include <glog/logging.h>
 #include <cstdio>
 #include <date/tz.h>
 #include <iostream>
