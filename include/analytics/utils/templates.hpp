@@ -44,22 +44,22 @@ template <typename T> arma::uvec _find_finite( const arma::Mat<T>& Q ){
 	return idx;
 }
 
-template<typename Duration> Duration string2duration(const std::string& data, const std::string& fmt ){
-	using namespace date;
-	using namespace std;
-	Duration du;
-	std::istringstream in(data);
-	in >> date::parse(fmt, du );
-	return du;
+template <typename Duration>
+Duration string2duration(const std::string& input, const std::string& fmt) {
+    int h, m, s;
+    char sep1, sep2;
+    std::istringstream in(input);
+    in >> h >> sep1 >> m >> sep2 >> s;
+    if (!in || sep1 != ':' || sep2 != ':') {
+        throw std::runtime_error("Invalid time format: " + input);
+    }
+    using namespace std::chrono;
+    return duration_cast<Duration>(hours(h) + minutes(m) + seconds(s));
 }
 
-template<typename Duration> Duration duration2string(const Duration& data, const std::string& fmt ){
-	using namespace date;
-	using namespace std;
-	Duration du;
-	std::istringstream in(data);
-	in >> date::parse(fmt, du );
-	return du;
+template <typename Duration>
+std::string duration2string(const Duration& data, const std::string& fmt) {
+    std::ostringstream out;
+    out << date::format(fmt, date::make_time(data));
+    return out.str();
 }
-
-

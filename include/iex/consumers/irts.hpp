@@ -98,12 +98,8 @@ void iex::IrtsConsumer<Clock>::trade_report_impl(time_point time,  uint64_t stoc
 template <class Clock>
 void iex::IrtsConsumer<Clock>::day_begin_impl( time_point day ){
 	namespace an = analytics;
-	using namespace date;
-	using namespace std::chrono;
-
-	std::string today = date::format("%F", floor<days>(day));
+	std::string today = date::format("%F", date::floor<std::chrono::days>(day));
 	LOG(INFO) << today;
-
 	fd = h5::open(file_path, H5F_ACC_RDWR );
 	an::zeros(trade_count);
 }

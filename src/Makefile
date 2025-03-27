@@ -25,7 +25,9 @@ LIBS =      -lglog  -lprofiler -lpcap -pthread -ldate-tz -lcurl     \
 			-lm -lz  -ldl -lpthread 							    \
 			$(ARMA)  $(MKL) $(HDF5)						       		\
 
-CXXFLAGS =  -I ../include -I/usr/local/include `pkg-config --cflags hdf5` -std=c++17  		\
+CXXFLAGS =  -I ../include -I/usr/local/include  \
+			-Wno-deprecated-declarations \
+			`pkg-config --cflags hdf5` -std=c++23  		\
 			-DARMA_DONT_USE_WRAPPER 								\
 			-DHOST_NAME_MAX=254 									\
 			-DVALUE_PRECISION=6 -DSTAT_PRECISION=4  				\

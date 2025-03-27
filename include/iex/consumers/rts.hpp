@@ -159,9 +159,7 @@ void iex::RtsConsumer<Clock>::day_begin_impl( time_point day ){
 template <class Clock>
 void iex::RtsConsumer<Clock>::day_end_impl( time_point day ){
 	namespace an = analytics;
-	using namespace date;
-	using namespace std::chrono;
-	std::string today = date::format("%F", floor<days>(day));
+	std::string today = date::format("%F", date::floor<std::chrono::days>(day));
 	// RTS
 	for( int i=0; i<avg_trade_count.size(); i++){
 		avg_trade_count[i] = trade_count[i] / static_cast<float>( slot );
