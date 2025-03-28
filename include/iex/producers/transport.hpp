@@ -18,7 +18,6 @@
 
 #include <io/interface>
 #include <pcap/pcap.h>
-#include <glog/logging.h>
 #include <string>
 #include <cstddef>
 #include <date/tz.h>

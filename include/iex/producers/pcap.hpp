@@ -16,15 +16,14 @@
 #ifndef IEX_PCAP_PRODUCER_HPP
 #define	IEX_PCAP_PRODUCER_HPP
 
+#include <sigma/error.hpp>
 #include <io/interface>
 #include <pcap/pcap.h>
-#include <glog/logging.h>
 #include <string>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include "../protocol"
-
 namespace iex {
 	namespace pcap {
 		/** mock pcap packet to compute only the length, eventually 
@@ -73,13 +72,13 @@ namespace iex {
 			pcap_t *fd_ = pcap_fopen_offline( fd, errbuf );
 
 			if( fd_ == NULL ) 
-				DLOG(ERROR) << "couldn't open file: " << input << " error: " << std::string(errbuf);
+				ERROR << "couldn't open file: " << input << " error: " << std::string(errbuf) << std::endl;
 			int layer_type =   pcap_datalink( fd_ );
-				DLOG(INFO) << "Link Layer type: " << layer_type;
+				INFO << "Link Layer type: " << layer_type << std::endl;
 			if( layer_type != 1 )
-				DLOG(FATAL) << "only ethernet frames are handled!!!";
+				FATAL << "only ethernet frames are handled!!!" << std::endl;
 			if(  pcap_loop( fd_, 0, pcap_handler, (uint8_t*)this ) < 0)
-				DLOG(FATAL) << "pcap_loop() failed: " << pcap_geterr(fd_);
+				FATAL << "pcap_loop() failed: " << pcap_geterr(fd_) << std::endl;
 			pcap_close(fd_);
 		}
 
@@ -91,7 +90,6 @@ namespace iex {
 
 			producer->transport_handler( segment );
 		}
-
 		private:
 			char  errbuf[PCAP_ERRBUF_SIZE];
 			const std::string input;

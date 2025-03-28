@@ -19,8 +19,6 @@
 #include <iex/producer>
 #include <iex/consumer>
 
-#include <gtest/gtest.h>
-#include <glog/logging.h>
 #include <cstdio>
 #include <date/tz.h>
 #include <iostream>

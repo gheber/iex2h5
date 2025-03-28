@@ -23,9 +23,9 @@
 #include <io/interface>
 #include <analytics/all>
 #include <date/tz.h>
-#include <glog/logging.h>
 #include <algorithm>
 #include <armadillo>
+#include <sigma/error.hpp>
 #include <h5cpp/all>
 
 static inline std::string rtrim(std::string &s) {
@@ -68,7 +68,6 @@ namespace iex {
 	};
 }
 
-
 template <class Clock>
 void iex::IrtsConsumer<Clock>::begin(uint64_t I, uint64_t S,  const std::vector<duration>& rts ){
 	namespace an = analytics;
@@ -94,12 +93,8 @@ void iex::IrtsConsumer<Clock>::trade_report_impl(time_point time,  uint64_t stoc
 template <class Clock>
 void iex::IrtsConsumer<Clock>::day_begin_impl( time_point day ){
 	namespace an = analytics;
-	using namespace date;
-	using namespace std::chrono;
-
-	std::string today = date::format("%F", floor<days>(day));
-	LOG(INFO) << today;
-
+	std::string today = date::format("%F", date::floor<std::chrono::days>(day));
+	INFO << today << std::endl;
 	fd = h5::open(file_path, H5F_ACC_RDWR );
 	an::zeros(trade_count);
 }

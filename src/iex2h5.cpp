@@ -12,16 +12,12 @@
  *   Copyright © <2017-2025> Varga Consulting, Toronto, On     info@vargaconsulting.ca
  *   _________________________________________________________________________________
  */
-
+#include <sigma/error.hpp>
 #include <vector>
-#include <glog/logging.h>
-#include <boost/program_options.hpp>
-#include <gperftools/profiler.h>
 #include <iostream>
 #include <argparse/all>
 
 using namespace std;
-namespace po = boost::program_options;
 // declarations from *.cpp files
 void initialise( const std::string input, const std::string output,
 		  const std::string days_path, const std::string assets_path,const std::string rts_path,

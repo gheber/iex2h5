@@ -53,8 +53,7 @@ template <typename T, typename Clock> void Filter<T, Clock>::operator()(
 
 template <typename T, typename Clock> void Filter<T, Clock>::predict( arma::fvec &price ) {
 	static_cast<T*>(this)->predict_impl();
-	// use BLAS for better performance
-	//cblas_scopy(N, this->price.memptr(), 1, price.memptr(), 1);
+	std::copy(this->price.begin(), this->price.end(), price.begin());
 	static_cast<T*>(this)->update();
 }
 

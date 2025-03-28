@@ -13,23 +13,18 @@
 #   _________________________________________________________________________________
 
 app = iex2h5
+LIBS = -lpcap -pthread -ldate-tz -lcurl \
+	-lm -lz  -ldl -lpthread 			\
+	`pkg-config --libs armadillo`		\
+	`pkg-config --libs hdf5`
 
-ARMA_CFLAGS = -DARMA_DONT_USE_WRAPPER -DARMA_USE_BLAS -DARMA_USE_LAPACK -DARMA_USE_HDF5 -DARMA_64BIT_WORD
-MPI = -I/usr/local/include -pthread -L/usr/local/lib -Wl,-rpath -Wl,/usr/local/lib -Wl,-rpath -Wl,/usr/local/lib -Wl,--enable-new-dtags -L/usr/local/lib -lmpi_cxx -lmpi
-ARMA = `pkg-config --libs armadillo`
-MKL = -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl
-HDF5 = `pkg-config --libs hdf5`
-
-LIBS =      -lglog  -lprofiler -lpcap -pthread -ldate-tz -lcurl     \
-			-lboost_program_options  					\
-			-lm -lz  -ldl -lpthread 							    \
-			$(ARMA)  $(MKL) $(HDF5)						       		\
-
-CXXFLAGS =  -I ../include -I/usr/local/include `pkg-config --cflags hdf5` -std=c++17  		\
-			-DARMA_DONT_USE_WRAPPER 								\
-			-DHOST_NAME_MAX=254 									\
-			-DVALUE_PRECISION=6 -DSTAT_PRECISION=4  				\
-			-DNODEBUG -DIEX_MAX_SYMBOLS=20000 -g -O3 -no-pie
+CXXFLAGS =  -I ../include -I/usr/local/include \
+	-Wno-deprecated-declarations \
+	`pkg-config --cflags hdf5` -std=c++23  	\
+	-DARMA_DONT_USE_WRAPPER 				\
+	-DHOST_NAME_MAX=254 					\
+	-DVALUE_PRECISION=6 -DSTAT_PRECISION=4  \
+	-DNODEBUG -DIEX_MAX_SYMBOLS=20000 -g -O3 -no-pie
 
 %.o : $(SRC_DIR)/%.cpp 
 	$(CXX) -$(INCLUDES) -o $@  $(CPPFLAGS) $(CXXFLAGS) -c $^
@@ -45,14 +40,13 @@ install:
 clean:
 	@$(RM) *.o *.prof  $(app)
 
-tops_files :=$(sort $(wildcard ../data/*))
-
 # iex-download --tops --from 2017-01-01 --to 2017-01-08
+tops_files :=$(sort $(wildcard ../data/*))
 test-tops: $(app) $(HOME)/iex.h5
-	$(foreach dp, $(tops_files), unpigz -c $(dp) | ./$(app) -g 3 --time-interval 20 --command rts --glog-minloglevel 3 -o $(HOME)/iex.h5; )
-	#./$(app) -o $(HOME)/iex.h5 --command index
+	$(foreach dp, $(tops_files), unpigz -c $(dp) | ./$(app) --time-interval 20 --command rts -o $(HOME)/iex.h5; )
+	./$(app) -o $(HOME)/iex.h5 --command index
 
 $(HOME)/iex.h5: $(app)
-	unpigz -c ../data/TOPS-2017-01-06.pcap.gz | ./$(app) -g 9 --command init -o $(HOME)/iex.h5
+	unpigz -c ../data/TOPS-2017-01-06.pcap.gz | ./$(app) --command init -o $(HOME)/iex.h5
 
 .PHONY: 

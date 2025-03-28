@@ -21,7 +21,6 @@
 #include <io/interface>
 #include <analytics/all>
 #include <date/tz.h>
-#include <glog/logging.h>
 #include <algorithm>
 #include <armadillo>
 #include <h5cpp/all>
@@ -44,7 +43,7 @@ namespace iex {
 		void heart_beat_impl( time_point time );
 		void day_begin_impl( time_point day );
 		void day_end_impl( time_point day );
-
+        
 		uint64_t slot, max_slot;
 	private:
 		const std::string file_path, tradingdays_path, rts_path;
@@ -75,33 +74,31 @@ void iex::RtsConsumer<Clock>::begin(uint64_t I, uint64_t S,  const std::vector<d
 		start, stop, 
 		event_count, trade_size, trade_count, fbid, fask, ftrade,
 		avg_trade_count, avg_spread, day_high, day_low, day_close, day_open);
-	LOG(INFO) << I << "x" << S <<" " << h5_ask.n_rows <<"x"<<h5_ask.n_cols << " " << rts.size();
- }
+	INFO << I << "x" << S <<" " << h5_ask.n_rows <<"x"<<h5_ask.n_cols << std::endl;
+}
 
-/**
-maintain trade related statistics
-*/
+/** maintain trade related statistics*/
 template <class Clock>
 void iex::RtsConsumer<Clock>::trade_report_impl(time_point time,  uint64_t stock, float price, uint64_t size, uint8_t flag){
-	if( slot >= max_slot ) return; //TODO: remove later
+	if( slot >= max_slot ) return;
 	
 	h5_trade_volume(stock, slot) += size;
 	trade_size[stock] += size;
- 	trade_count[stock] ++;
+ 	trade_count[stock]++;
 	event_count[stock]++;
 	ftrade(time, stock, price, size);
 }
 
 template <class Clock>
 void iex::RtsConsumer<Clock>::ask_impl(time_point time,  uint64_t stock, float price, uint64_t size, uint8_t flag){
-	if( slot >= max_slot ) return; //TODO: remove later
+	if( slot >= max_slot ) return;
 	h5_ask_volume(stock, slot) = size;
 	fask(time, stock, price, size);
 	event_count[stock]++;
 }
 template <class Clock>
 void iex::RtsConsumer<Clock>::bid_impl(time_point time,  uint64_t stock, float price, uint64_t size, uint8_t flag){
-	if( slot >= max_slot ) return; //TODO: remove later
+	if( slot >= max_slot ) return;
 	h5_bid_volume(stock, slot) = size;
 	fbid(time, stock, price, size);
 	event_count[stock]++;
@@ -153,8 +150,6 @@ void iex::RtsConsumer<Clock>::day_begin_impl( time_point day ){
 template <class Clock>
 void iex::RtsConsumer<Clock>::day_end_impl( time_point day ){
 	namespace an = analytics;
-	using namespace date;
-	using namespace std::chrono;
 	h5::fd_t fd = h5::open(file_path, H5F_ACC_RDWR);
 	std::vector<std::string> rts = h5::read<std::vector<std::string>>(fd, rts_path);
 	std::string today = date::format("%F", floor<days>(day));
