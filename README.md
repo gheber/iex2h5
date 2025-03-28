@@ -1,20 +1,13 @@
 # IEX2H5: IEX TOPS Dataset to HDF5 Converter
-A high-performance C++ utility for converting [IEX Transport Protocol (IEX-TP)][101] packet captures into structured HDF5 datasets, suitable for financial analytics, scientific computation, and time-series processing.
+A high-performance C++ utility for converting [IEX Transport Protocol (IEX-TP)][100] packet captures into structured HDF5 datasets, suitable for financial analytics, scientific computation, and time-series processing.
 
 ## 📦 Installation
-
-1. **Install Intel oneAPI** (for Intel compilers and MKL)  
-   Download from: [Intel oneAPI Base Toolkit](https://www.intel.com/content/www/us/en/developer/tools/oneapi/base-toolkit-download.html)
-
-2. **Install required libraries**
-
 ```bash
-sudo apt install libhdf5-dev libboost-program-options-dev \
-    libboost-system-dev libgoogle-glog-dev libcpprest-dev libpcap-dev pigz
-# intall Howard Hinnant's date library
-git clone https://github.com/HowardHinnant/date.git && cd date
-cmake -DBUILD_TZ_LIB=ON . && make && sudo make install
+sudo apt install libhdf5-dev pigz
+mkdir build && cmake build && cmake ../
+make -j 12 && sudo make install
 ```
+
 # Example Usage: Convert IEX TOPS Dataset
 ```
 steven@jupyter:~/projects/iex2h5/src$ ./iex2h5 --help
@@ -55,3 +48,5 @@ example:
 
 Copyright © <2017-2025> Varga Consulting, Toronto, ON, info@vargaconsulting.ca
 ```
+
+[100]: https://iextrading.com/trading/market-data/

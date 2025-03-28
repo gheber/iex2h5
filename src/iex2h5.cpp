@@ -15,7 +15,7 @@
 #include <sigma/error.hpp>
 #include <vector>
 #include <iostream>
-#include <argparse/all>
+#include <argparse>
 
 using namespace std;
 // declarations from *.cpp files

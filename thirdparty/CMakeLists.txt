@@ -1,4 +1,3 @@
-#
 #   ALL RIGHTS RESERVED.
 #   _________________________________________________________________________________
 #   NOTICE: All information contained  herein is, and remains the property  of  Varga
@@ -9,42 +8,14 @@
 #   tion  of  this  material is strictly forbidden unless prior written permission is
 #   obtained from Varga Consulting.
 #
-#   Copyright © <2017-2025> Varga Consulting, Toronto, On     info@vargaconsulting.ca
+#   Copyright © <2011-2024> Varga Consulting, Toronto, On     info@vargaconsulting.ca
 #   _________________________________________________________________________________
-#
 
-DIRS =  src
-
-BUILDDIRS = $(DIRS:%=build-%)
-INSTALLDIRS = $(DIRS:%=install-%)
-CLEANDIRS = $(DIRS:%=clean-%)
-TESTDIRS = $(DIRS:%=test-%)
-
-all: $(BUILDDIRS)
-$(DIRS): $(BUILDDIRS)
-$(BUILDDIRS):
-	$(MAKE) -C $(@:build-%=%)
-
-install: $(INSTALLDIRS) all
-$(INSTALLDIRS):
-	$(MAKE) -C $(@:install-%=%) install
-
-test: $(TESTDIRS) all lib
-$(TESTDIRS):  
-	$(MAKE) -C $(@:test-%=%) test
-
-
-clean: $(CLEANDIRS)
-$(CLEANDIRS): 
-	$(MAKE) -C $(@:clean-%=%) clean
-
-.PHONY: subdirs $(DIRS)
-.PHONY: subdirs $(BUILDDIRS)
-.PHONY: subdirs $(INSTALLDIRS)
-.PHONY: subdirs $(TESTDIRS)
-.PHONY: subdirs $(CLEANDIRS)
-.PHONY: all install clean  
-
-
-
-
+add_subdirectory(argparse)
+add_subdirectory(armadillo)
+add_subdirectory(date)
+add_subdirectory(doctest)
+add_subdirectory(h5cpp)
+add_subdirectory(hiredis)
+add_subdirectory(rediscpp)
+add_subdirectory(pcap)
