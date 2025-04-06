@@ -54,7 +54,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
         COMMAND unpigz -c ${DATA_PCAP} | $<TARGET_FILE:${PROGRAM_NAME}> -g 9 --command rts -o ${IEX_H5}
         COMMAND ${CMAKE_COMMAND} -E touch ${IEX_H5}.rts
         DEPENDS ${PROGRAM_NAME} init-iexh5
-        COMMENT "Converting IR/TS stream to RTS in ${IEX_H5}"
+        COMMENT "Converting IRTS stream to RTS in ${IEX_H5}"
         VERBATIM
     )
     add_custom_target(rts-iexh5 DEPENDS ${IEX_H5}.rts)
