@@ -12,41 +12,57 @@
  *   Copyright © <2017-2025> Varga Consulting, Toronto, On     info@vargaconsulting.ca
  *   _________________________________________________________________________________
  */
-#include <sigma/error.hpp>
-#include <vector>
+
+#include <sstream>
+#include <string>
+#include <map>
+#include <functional>
 #include <iostream>
+#include <ranges>
+#include <string>
+
 #include <argparse/all>
+#include <error.hpp>
+#include <patterns.hpp>
+#include <io.hpp>
+#include <pcap.hpp>
+#include <utils.hpp>
+#include <generics.hpp>
+#include <filters.hpp>
+
+#include "consumers.hpp"
+#include <h5cpp/all>
+
+namespace io {
+	template <
+		typename Consumer, template <typename> typename Producer = iex::pcap::producer_t, typename... Args>
+	requires consumer_concept<Consumer> && requires(Args&&... args) { Consumer(std::forward<Args>(args)...); }
+	std::function<void()> execute( std::FILE* fd, typename Consumer::clock::duration start,
+		typename Consumer::clock::duration interval, typename Consumer::clock::duration stop, Args&&... args) {
+		
+		return [=, ... args_captured = std::forward<Args>(args)]() mutable {
+			try {
+				Consumer consumer(std::move(args_captured)...);
+				Producer<Consumer> producer(fd, interval);
+				producer.run(consumer, start, stop);
+			} catch (const std::runtime_error& err) {
+				ERROR << err.what() << std::endl;
+			}
+		};
+	}
+} // namespace io
+	
 
 using namespace std;
-// declarations from *.cpp files
-void initialise( const std::string input, const std::string output,
-		  const std::string days_path, const std::string assets_path,const std::string rts_path,
-		  const std::string day_begin, const std::string day_end,  unsigned long interval );
-
-void generate_irts( const std::string input, const std::string output,
-		  const std::string days_path, const std::string assets_path, const std::string rts_path,
-		  const std::string day_begin, const std::string day_end,  unsigned long interval );
-
-void generate_rts( const std::string  input, const std::string output,
-		  const std::string days_path, const std::string assets_path,const std::string rts_path,
-		  const std::string day_begin, const std::string day_end,  unsigned long interval );
-
-void generate_index( const std::string input, const std::string output,
-		  const std::string days_path, const std::string assets_path,const std::string rts_path,
-		  const std::string day_begin, const std::string day_end,  unsigned long interval );
-
-using command = void(const std::string, const std::string, const std::string, const std::string,
-	const std::string, const std::string, const std::string,  unsigned long);
 
 int main(int argc, char **argv) {
-
-	std::string output, stream,
-		rts_path, instruments_path, trading_days_path, days, day_begin, day_end, cmd;
+	namespace ch = std::chrono;
+	std::string hdf5_path, stream,
+	rts_path, instruments_path, trading_days_path, days, day_begin, day_end, cmd;
     unsigned time_interval, gzip;
 	argparse::ArgumentParser program(argv[0], "1.0.1", argparse::default_arguments::none);
-
 	program.add_argument("-h", "--help")
-	  .action([&](const std::string& s) {
+	.action([&](const std::string& s) {
 		cout << "\033[1m" "IEX2H5 converts IEX TOPS Datasets to HDF5 Format" "\033[0m" << endl << endl;
 		cout << "iex2h5 is a specialized tool for importing IEX TOPS datasets into the HDF5 data format," << endl;
 		cout << "enabling efficient  storage and analysis of large  financial datasets. HDF5 is a widely" << endl;
@@ -56,27 +72,21 @@ int main(int argc, char **argv) {
 		cout << "This application allows users to convert captured packet data streams (e.g., DEEP/TOPS)" << endl;
 		cout << "into structured HDF5 datasets for advanced analytics and seamless integration into" << endl;
 		cout << "scientific, engineering, and financial workflows." << endl << endl;
-
+		
 		cout << program << endl << endl;
-
+		
 		cout << "\033[1m" "example:" "\033[0m" <<endl;
 		cout << "   unpigz -c tops.pcap.gz | " << argv[0] << " -g 9 --time-interval 10 --command init" << endl;
 		cout << "   for file in repo/*.pcap.gz; do unpigz -c ${file} | iex2h5 -g 9 --command rts -o ${HOME}/iex.h5;" << endl << endl;
-
+		
 		cout << "Copyright © <2017-2025> Varga Consulting, Toronto, ON, info@vargaconsulting.ca" << endl << endl;
 		std::exit(0);
-	  })
-	  .default_value(false)
-	  .help("shows help message")
-	  .implicit_value(true)
-	  .nargs(0);
-
-	std::map<std::string,std::function<command>> dispatch;
-	dispatch["init"] 	= initialise;
-	dispatch["irts"] 	= generate_irts;
-	dispatch["rts"] 	= generate_rts;
-	dispatch["index"] 	= generate_index;
-
+	})
+	.default_value(false)
+	.help("shows help message")
+	.implicit_value(true)
+	.nargs(0);
+	
 	program.add_argument("--time-interval").default_value(static_cast<unsigned>(10)).scan<'u', unsigned>().help("temporal interval in seconds, irts stream is converted into");
 	program.add_argument("--start").default_value(std::string("14:30:00")).help("lower bound in UTC, considers events only after");
 	program.add_argument("--stop").default_value(std::string("21:00:00")).help("upper bound in UTC, considers events only before");
@@ -94,25 +104,66 @@ int main(int argc, char **argv) {
 		"rts   - converts irts to rts\n"
 		"index - scans and rebuilds trading day index\n"
 		"\n");
-	try {
-		program.parse_args(argc, argv);
-	} catch (const std::exception& err){
-		std::cerr << err.what() << std::endl;
-		std::cerr << program;
-		return 1;
-	}
-
+		try {
+			program.parse_args(argc, argv);
+		} catch (const std::exception& err){
+			std::cerr << err.what() << std::endl;
+			std::cerr << program;
+			return 1;
+		}
+		
+	h5::mute();
+	std::map<std::string, std::function<void()>> dispatch;
     try {
-		std::tie(time_interval, day_begin, day_end, output, rts_path, instruments_path, trading_days_path, gzip, cmd) = std::make_tuple(
+		std::tie(time_interval, day_begin, day_end, hdf5_path, rts_path, instruments_path, trading_days_path, gzip, cmd) = std::make_tuple(
 			program.get<unsigned>("--time-interval"), program.get<std::string>("--start"), program.get<std::string>("--stop"),
 			program.get<std::string>("--output"),
 			program.get<std::string>("--rts-path"), program.get<std::string>("--instruments-path"), program.get<std::string>("trading-days-path"),
 			program.get<unsigned>("--gzip"), program.get<std::string>("--command"));
-		dispatch[cmd]("", output, trading_days_path, rts_path, instruments_path, day_begin, day_end, time_interval );
+		
+		using clock = std::chrono::system_clock;
+		using stats = io::stats::consumer_t<clock>;
+		using init = io::base::consumer_t<clock>;
+		using rts = io::rts::consumer_t<clock>;
+		using irts = io::irts::consumer_t<clock>;
+		using duration = typename clock::duration;
+
+		duration start = utils::string_to_duration<duration>(day_begin),
+			stop  = utils::string_to_duration<duration>(day_end),
+			interval = duration_cast<duration>(std::chrono::seconds(time_interval));
+		
+		h5::fd_t fd;
+		try {
+			fd = h5::open(hdf5_path, H5F_ACC_RDWR);
+		} catch (const h5::error::any err ){
+			fd = h5::create(hdf5_path, H5F_ACC_TRUNC);
+		}
+		dispatch = {
+			{"init",  io::execute<init>(stdin, start, interval, stop,  
+				fd, rts_path, instruments_path, trading_days_path, start, stop, interval)},
+			{"stats", io::execute<stats>(stdin, start, interval, stop,  fd)},
+			{"rts", io::execute<rts>(stdin, start, interval, stop,    fd, rts_path, instruments_path, trading_days_path)},
+			{"irts", io::execute<irts>(stdin, start, interval, stop,   fd, rts_path, instruments_path, trading_days_path)},
+			{"index", [&](){
+				std::vector<std::string> active_days = h5::ls(fd, "stats");
+				h5::write(fd, trading_days_path, active_days);
+			}}
+		};
+
+		dispatch[cmd]();
+	} catch( const std::bad_function_call& err ) {
+		std::ostringstream oss;
+		for (auto it = dispatch.begin(); it != dispatch.end(); ++it) {
+			oss << it->first;
+			if (std::next(it) != dispatch.end())
+				oss << ", ";
+		}
+		std::cerr << std::format("unknown command `{}` please use any of the following: `{}`", cmd, oss.str()) << std::endl;
 	} catch( const std::exception& err ) {
 		cout << err.what() << endl;
         cout << program << endl;
 		return 1;
     }
+	h5::unmute();
     return 0;
 }

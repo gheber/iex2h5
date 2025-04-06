@@ -24,12 +24,12 @@ CXXFLAGS =  -I ../include -I/usr/local/include \
 	-DARMA_DONT_USE_WRAPPER 				\
 	-DHOST_NAME_MAX=254 					\
 	-DVALUE_PRECISION=6 -DSTAT_PRECISION=4  \
-	-DNODEBUG -DIEX_MAX_SYMBOLS=20000 -g -O3 -no-pie
+	-DDEBUG -DIEX_MAX_SYMBOLS=20000 -g -O3 -no-pie
 
 %.o : $(SRC_DIR)/%.cpp 
 	$(CXX) -$(INCLUDES) -o $@  $(CPPFLAGS) $(CXXFLAGS) -c $^
 
-iex2h5: $(app).o consumer_init.o consumer_irts.o consumer_rts.o consumer_index.o
+iex2h5: $(app).o
 	$(CXX) $^ $(LIBS) -Wl,-rpath=$(pwd)  -o $@ 	
 
 all: $(app) 
@@ -48,5 +48,21 @@ test-tops: $(app) $(HOME)/iex.h5
 
 $(HOME)/iex.h5: $(app)
 	unpigz -c ../data/TOPS-2017-01-06.pcap.gz | ./$(app) --command init -o $(HOME)/iex.h5
+
+stats: $(app)
+	unpigz -c ../data/TOPS-2017-01-06.pcap.gz | ./$(app) --command stats -o $(HOME)/iex.h5
+
+init: $(app)
+	unpigz -c ../data/TOPS-2017-01-06.pcap.gz | ./$(app) --command init -o $(HOME)/iex.h5
+
+irts: $(app)
+	unpigz -c ../data/TOPS-2017-01-06.pcap.gz | ./$(app) --command irts -o $(HOME)/iex.h5
+
+rts: $(app)
+	unpigz -c ../data/TOPS-2017-01-06.pcap.gz | ./$(app) --command rts -o $(HOME)/iex.h5
+
+index: $(app)
+	./$(app) --command index -o $(HOME)/iex.h5
+
 
 .PHONY: 
