@@ -20,19 +20,19 @@
 using namespace std;
 // declarations from *.cpp files
 void initialise( const std::string input, const std::string output,
-		  const std::string days_path, const std::string assets_path,const std::string rts_path,
+		  const std::string trading_days_path, const std::string instruments_path,const std::string rts_path,
 		  const std::string day_begin, const std::string day_end,  unsigned long interval );
 
 void generate_irts( const std::string input, const std::string output,
-		  const std::string days_path, const std::string assets_path, const std::string rts_path,
+		  const std::string trading_days_path, const std::string instruments_path, const std::string rts_path,
 		  const std::string day_begin, const std::string day_end,  unsigned long interval );
 
 void generate_rts( const std::string  input, const std::string output,
-		  const std::string days_path, const std::string assets_path,const std::string rts_path,
+		  const std::string trading_days_path, const std::string instruments_path,const std::string rts_path,
 		  const std::string day_begin, const std::string day_end,  unsigned long interval );
 
 void generate_index( const std::string input, const std::string output,
-		  const std::string days_path, const std::string assets_path,const std::string rts_path,
+		  const std::string trading_days_path, const std::string instruments_path,const std::string rts_path,
 		  const std::string day_begin, const std::string day_end,  unsigned long interval );
 
 using command = void(const std::string, const std::string, const std::string, const std::string,
@@ -103,12 +103,12 @@ int main(int argc, char **argv) {
 	}
 
     try {
-		std::tie(time_interval, day_begin, day_end, output, rts_path, instruments_path, trading_days_path, gzip, cmd) = std::make_tuple(
+		std::tie(time_interval, day_begin, day_end, output, trading_days_path, instruments_path, rts_path, gzip, cmd) = std::make_tuple(
 			program.get<unsigned>("--time-interval"), program.get<std::string>("--start"), program.get<std::string>("--stop"),
 			program.get<std::string>("--output"),
-			program.get<std::string>("--rts-path"), program.get<std::string>("--instruments-path"), program.get<std::string>("trading-days-path"),
+			program.get<std::string>("trading-days-path"), program.get<std::string>("--instruments-path"), program.get<std::string>("--rts-path"),
 			program.get<unsigned>("--gzip"), program.get<std::string>("--command"));
-		dispatch[cmd]("", output, trading_days_path, rts_path, instruments_path, day_begin, day_end, time_interval );
+		dispatch[cmd]("", output, trading_days_path, instruments_path, rts_path, day_begin, day_end, time_interval );
 	} catch( const std::exception& err ) {
 		cout << err.what() << endl;
         cout << program << endl;
