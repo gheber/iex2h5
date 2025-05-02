@@ -25,13 +25,12 @@ install(TARGETS ${PROGRAM_NAME} DESTINATION bin)
 
 # Includes, libraries, compiler options
 target_include_directories(${PROGRAM_NAME} PRIVATE ${INCLUDE_DIRS})
-target_compile_options(${PROGRAM_NAME} PRIVATE -w)
-target_compile_definitions(${PROGRAM_NAME} PRIVATE IEX_PROGRAM_NAME="${PROJECT_NAME}")
+target_compile_options(${PROGRAM_NAME} PRIVATE -w -fno-omit-frame-pointer)
+target_compile_definitions(${PROGRAM_NAME} PRIVATE ARMA_NO_DEBUG IEX_PROGRAM_NAME="${PROJECT_NAME}")
 target_link_libraries(${PROGRAM_NAME} PRIVATE ${LIBS})
 
 # Custom commands to mimic Makefile logic
-if(CMAKE_BUILD_TYPE MATCHES "Debug")
-
+if(CMAKE_BUILD_TYPE MATCHES "Debug" OR CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
     set(IEX_H5 "$ENV{HOME}/iex.h5")
     set(DATA_DIR "${CMAKE_SOURCE_DIR}/data")
     set(DATA_PCAP "${DATA_DIR}/TOPS-2017-01-06.pcap.gz")

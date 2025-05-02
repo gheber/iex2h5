@@ -3,14 +3,14 @@ A high-performance C++ utility for converting [IEX Transport Protocol (IEX-TP)][
 
 ## 📦 Installation
 ```bash
-sudo apt install libhdf5-dev pigz
+sudo apt install libhdf5-dev pigz cmake hdf5-tools
 mkdir build && cmake build && cmake ../
 make -j 12 && sudo make install
 ```
 
 # Example Usage: Convert IEX TOPS Dataset
 ```
-steven@jupyter:~/projects/iex2h5/src$ ./iex2h5 --help
+steven@gauss:~/projects/iex2h5/build$ iex2h5 --help
 IEX2H5 converts IEX TOPS Datasets to HDF5 Format
 
 iex2h5 is a specialized tool for importing IEX TOPS datasets into the HDF5 data format,
@@ -22,7 +22,7 @@ This application allows users to convert captured packet data streams (e.g., DEE
 into structured HDF5 datasets for advanced analytics and seamless integration into
 scientific, engineering, and financial workflows.
 
-Usage: ./iex2h5 [--help] [--time-interval VAR] [--start VAR] [--stop VAR] [--output VAR] [--rts-path VAR] [--instruments-path VAR] [--trading-days-path VAR] [--gzip VAR] [--command VAR]
+Usage: iex2h5 [--help] [--time-interval VAR] [--start VAR] [--stop VAR] [--output VAR] [--rts-path VAR] [--instruments-path VAR] [--trading-days-path VAR] [--gzip VAR] [--command VAR]
 
 Optional arguments:
   -h, --help           shows help message 
@@ -43,8 +43,9 @@ Optional arguments:
 
 
 example:
-   unpigz -c tops.pcap.gz | ./iex2h5 -g 9 --time-interval 10 --command init
-   for file in repo/*.pcap.gz; do unpigz -c ${file} | iex2h5 -g 9 --command rts -o ${HOME}/iex.h5;
+   unpigz -c tops.pcap.gz | iex2h5 --time-interval 10 --command init
+   for file in repo/*.pcap.gz; do unpigz -c ${file} | iex2h5 --command rts -o ${HOME}/iex.h5; done
+   iex2h5 --command index
 
 Copyright © <2017-2025> Varga Consulting, Toronto, ON, info@vargaconsulting.ca
 ```

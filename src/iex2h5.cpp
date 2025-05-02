@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
 	std::string hdf5_path, stream,
 	rts_path, instruments_path, trading_days_path, days, day_begin, day_end, cmd;
     unsigned time_interval, gzip;
-	argparse::ArgumentParser program(argv[0], "1.0.1", argparse::default_arguments::none);
+	argparse::ArgumentParser program(argv[0], "1.0.2", argparse::default_arguments::none);
 	program.add_argument("-h", "--help")
 	.action([&](const std::string& s) {
 		cout << "\033[1m" "IEX2H5 converts IEX TOPS Datasets to HDF5 Format" "\033[0m" << endl << endl;
@@ -73,8 +73,8 @@ int main(int argc, char **argv) {
 		cout << program << endl << endl;
 		
 		cout << "\033[1m" "example:" "\033[0m" <<endl;
-		cout << "   unpigz -c tops.pcap.gz | " << argv[0] << "--time-interval 10 --command init" << endl;
-		cout << "   for file in repo/*.pcap.gz; do unpigz -c ${file} | iex2h5 --command rts -o ${HOME}/iex.h5; done" << endl << endl;
+		cout << "   unpigz -c tops.pcap.gz | " << argv[0] << " --time-interval 10 --command init" << endl;
+		cout << "   for file in repo/*.pcap.gz; do unpigz -c ${file} | iex2h5 --command rts -o ${HOME}/iex.h5; done" << endl;
 		cout << "   iex2h5 --command index" << endl << endl;
 
 		cout << "Copyright © <2017-2025> Varga Consulting, Toronto, ON, info@vargaconsulting.ca" << endl << endl;
@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
 		std::tie(time_interval, day_begin, day_end, hdf5_path, rts_path, instruments_path, trading_days_path, gzip, cmd) = std::make_tuple(
 			program.get<unsigned>("--time-interval"), program.get<std::string>("--start"), program.get<std::string>("--stop"),
 			program.get<std::string>("--output"),
-			program.get<std::string>("trading-days-path"), program.get<std::string>("--instruments-path"), program.get<std::string>("--rts-path"),
+			program.get<std::string>("--rts-path"), program.get<std::string>("--instruments-path"), program.get<std::string>("trading-days-path"),
 			program.get<unsigned>("--gzip"), program.get<std::string>("--command"));
 		
 		using clock = std::chrono::system_clock;
