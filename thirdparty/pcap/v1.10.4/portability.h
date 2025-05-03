@@ -66,6 +66,7 @@ extern "C" {
 
 #ifdef HAVE_STRLCPY
   #define pcap_strlcpy	strlcpy
+  size_t strlcpy(char *dst, const char *src, size_t size);
 #else
   #if defined(_MSC_VER) || defined(__MINGW32__)
     /*
