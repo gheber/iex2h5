@@ -19,29 +19,12 @@ set(current_version_dir "v1.10.4")
 
 # Source files — glob just what we need, filtered to core and Linux-specific files
 set(all_source_files
-    ${current_version_dir}/bpf_dump.c
-    ${current_version_dir}/bpf_filter.c
-    ${current_version_dir}/bpf_image.c
-    ${current_version_dir}/charconv.c
-    ${current_version_dir}/etherent.c
-    ${current_version_dir}/fad-getad.c
-    ${current_version_dir}/fad-gifc.c
-    ${current_version_dir}/fmtutils.c
-    ${current_version_dir}/gencode_stub.c
-    ${current_version_dir}/nametoaddr.c
-    ${current_version_dir}/optimize.c
-    ${current_version_dir}/pcap.c
-    ${current_version_dir}/pcap-common.c
-    ${current_version_dir}/pcap-linux.c
-    ${current_version_dir}/pcap-netfilter-linux.c
-    ${current_version_dir}/pcap-usb-linux.c
-    ${current_version_dir}/pcap-usb-linux-common.c
-    ${current_version_dir}/pcap-util.c
-    ${current_version_dir}/savefile.c
-    ${current_version_dir}/sf-pcap.c
-    ${current_version_dir}/sf-pcapng.c
-    ${current_version_dir}/sockutils.c
+   bpf_dump.c bpf_filter.c bpf_image.c charconv.c etherent.c fad-getad.c fad-gifc.c fmtutils.c
+   gencode_stub.c nametoaddr.c optimize.c pcap.c pcap-common.c pcap-linux.c pcap-netfilter-linux.c
+   pcap-usb-linux.c pcap-usb-linux-common.c pcap-util.c savefile.c sf-pcap.c sf-pcapng.c sockutils.c strlcpy.c
 )
+list(TRANSFORM all_source_files PREPEND "${current_version_dir}/")
+
 # Create the static library target
 add_library(${libname} STATIC ${all_source_files})
 set_target_properties(${libname} PROPERTIES OUTPUT_NAME pcap)
