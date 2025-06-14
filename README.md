@@ -4,13 +4,13 @@ A high-performance C++ utility for converting [IEX Transport Protocol (IEX-TP)][
 ## 📦 Installation
 ```bash
 sudo apt install libhdf5-dev pigz
-mkdir build && cmake build && cmake ../
+mkdir build && cd build && cmake ../
 make -j 12 && sudo make install
 ```
 
 # Example Usage: Convert IEX TOPS Dataset
 ```
-steven@jupyter:~/projects/iex2h5/src$ ./iex2h5 --help
+steven@gauss:~/projects/iex2h5/src$ ./iex2h5 --help
 IEX2H5 converts IEX TOPS Datasets to HDF5 Format
 
 iex2h5 is a specialized tool for importing IEX TOPS datasets into the HDF5 data format,
@@ -34,7 +34,7 @@ Optional arguments:
   --instruments-path   hdf5-group/directory for listed [symbols|assets|financial] instruments [nargs=0..1] [default: "/instruments.txt"]
   --trading-days-path  hdf5-group/directory for active trading days [nargs=0..1] [default: "/trading_days.txt"]
   -g, --gzip           0-9 0 for no compression, 9 for highest [nargs=0..1] [default: 0]
-  -c, --command        init  - intitialises hdf5 container with retrieved symbols from irts/stream
+  -c, --command        init  - intitializes hdf5 container with retrieved symbols from irts/stream
                        irts  - saves captured events as irts stream
                        rts   - converts irts to rts
                        index - scans and rebuilds trading day index
@@ -49,4 +49,8 @@ example:
 Copyright © <2017-2025> Varga Consulting, Toronto, ON, info@vargaconsulting.ca
 ```
 
+### Notice:
+“[Data provided][100] for free by IEX. By accessing or using IEX Historical Data, you agree to the [IEX Historical Data Terms of Use][101].”
+
 [100]: https://iextrading.com/trading/market-data/
+[101]: https://www.iexexchange.io/legal/hist-data-terms
