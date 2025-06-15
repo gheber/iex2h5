@@ -21,12 +21,12 @@ namespace iex {
 	struct tick_t {
 		uint64_t time, size; 
 		float price;
-		uint32_t contract_id: 20,
+		uint32_t contract_id: 14,
 			is_trade: 1,
 			is_bid: 1,
 			is_ask: 1,
 			remove_level: 1,
-			reserved: 8;
+			reserved: 14;
 	}__attribute__((packed));
 	static_assert( sizeof(tick_t) == 24, "not aligned to byte!!!");
 	static_assert(std::is_standard_layout_v<tick_t>);

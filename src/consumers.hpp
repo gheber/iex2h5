@@ -89,6 +89,7 @@ namespace io::base {
         using clock       = clock_t;
         using time_point  = typename clock::time_point;
         using duration    = typename clock::duration;
+        using contract_t  = uint16_t;
 
         consumer_t(h5::fd_t fd, std::string rts_path, std::string asset_path, std::string tradingdays_path,
             duration start, duration stop, duration interval) : fd(fd), rts_path(rts_path), asset_path(asset_path), 
@@ -156,7 +157,8 @@ namespace io::base {
         duration start, stop, interval;
         std::unordered_map<uint64_t, uint32_t> map;
         std::vector<std::string> instruments, rts, trading_days;
-        uint32_t I, T;
+        contract_t I, T;
+        static constexpr contract_t MAX_CONTRACT_ID = (1 << 14) - 1;
     };
 } // namespace io::base
 
@@ -191,8 +193,8 @@ namespace io::rts {
             );
         }
         void trade_report(time_point time, uint64_t symbol, float price, uint64_t size, uint8_t /*flag*/) {
-            uint32_t id = this->to_id(symbol);
-            if(slot >= max_slot || id > I) return;
+            contract_t id = to_id(symbol);
+            if (id >= I) return void(WARNING << "contract_id " << id << " exceeds current limit I=" << I << std::endl);
             h5_trade_volume(id, slot) += size;
             trade_size[id] += size;
             trade_count[id]++;
@@ -200,15 +202,15 @@ namespace io::rts {
             ftrade(time, id, price, size);            
         }
         void ask(time_point time, uint64_t symbol, float price, uint64_t size, uint8_t flag) {
-            uint32_t id = this->to_id(symbol);
-            if(slot >= max_slot || id > I) return;
+            contract_t id = to_id(symbol);
+            if (id >= I) return void(WARNING << "contract_id " << id << " exceeds current limit I=" << I << std::endl);
             h5_ask_volume(id, slot) += size;
             fask(time, id, price, size);
             event_count[id]++;              
         }
         void bid(time_point time, uint64_t symbol, float price, uint64_t size, uint8_t flag) {
-            uint32_t id = this->to_id(symbol);
-            if(slot >= max_slot || id > I) return;
+            contract_t id = to_id(symbol);
+            if (id >= I) return void(WARNING << "contract_id " << id << " exceeds current limit I=" << I << std::endl);
             h5_bid_volume(id, slot) += size;
             fbid(time, id, price, size);
             event_count[id]++;            
