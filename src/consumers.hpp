@@ -21,10 +21,6 @@
 #include <h5cpp/io>
 
 namespace {
-    inline std::string to_string(uint64_t symbol) {
-        char *c = (char*) &symbol;
-        return std::string(c, c + 8);
-    }
     inline uint64_t to_ns(std::chrono::system_clock::time_point tp) {
         return static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::nanoseconds>(tp.time_since_epoch()).count()
@@ -70,9 +66,9 @@ namespace io::stats {
             stat.count += 1;
         }
 
-        void ask(time_point /*t*/, uint64_t /*symbol_id*/, float /*price*/, uint64_t /*size*/, uint8_t /*flag*/) {}
-        void bid(time_point /*t*/, uint64_t /*symbol_id*/, float /*price*/, uint64_t /*size*/, uint8_t /*flag*/) {}
-        void trade_break(time_point /*t*/, uint64_t /*symbol_id*/, float /*price*/, uint64_t /*size*/, uint8_t /*flag*/) {}
+        void ask(time_point time, uint64_t symbol_id, float price, uint64_t size, uint8_t flag) {}
+        void bid(time_point time, uint64_t symbol_id, float price, uint64_t size, uint8_t flag) {}
+        void trade_break(time_point time, uint64_t symbol_id, float price, uint64_t size, uint8_t flag) {}
 
     private:
         struct stats_t {
@@ -136,9 +132,9 @@ namespace io::base {
             find_or_insert(iex_symbol_id);
         }
 
-        void ask(time_point /*t*/, uint64_t /*symbol_id*/, float /*price*/, uint64_t /*size*/, uint8_t /*flag*/) {}
-        void bid(time_point /*t*/, uint64_t /*symbol_id*/, float /*price*/, uint64_t /*size*/, uint8_t /*flag*/) {}
-        void trade_break(time_point /*t*/, uint64_t /*symbol_id*/, float /*price*/, uint64_t /*size*/, uint8_t /*flag*/) {}
+        void ask(time_point time, uint64_t symbol_id, float price, uint64_t size, uint8_t flag) {}
+        void bid(time_point time, uint64_t symbol_id, float price, uint64_t size, uint8_t flag) {}
+        void trade_break(time_point time, uint64_t symbol_id, float price, uint64_t size, uint8_t flag) {}
 
         [[nodiscard]] contract_t to_id(uint64_t iex_symbol) {
             uint64_t base40_encoded_symbol = utils::base40::encode(iex_symbol); // top 50 bits
@@ -193,10 +189,8 @@ namespace io::rts {
     template <typename clock_t>
     struct consumer_t : public io::base::consumer_t<clock_t> {
         using base = io::base::consumer_t<clock_t>;
-        using clock       = clock_t;
-        using time_point  = typename clock::time_point;
-        using duration    = typename clock::duration;
-        using base::map, base::fd, base::rts, base::I, base::T;
+        using typename base::clock, base::duration, base::time_point, base::contract_t;
+        using base::flat_map, base::fd, base::rts, base::I, base::T, base::to_id;
         
         consumer_t(h5::fd_t fd, std::string rts_path, std::string asset_path, std::string tradingdays_path)
             : io::base::consumer_t<clock>(fd, rts_path, asset_path, tradingdays_path) {
@@ -204,7 +198,7 @@ namespace io::rts {
             resize(I, T);
         }
         void resize(size_t R, size_t C) { //n_rows, n_cols
-            this->max_slot = C;
+            max_slot = C;
             generics::resize(R,C, h5_bid,h5_ask,h5_trade,  h5_bid_volume, h5_ask_volume, h5_trade_volume);
             generics::resize(R,
                 start, stop, 
@@ -287,7 +281,6 @@ namespace io::rts {
 
         uint64_t slot, max_slot, counter = 0;
     private:
-        const std::string file_path, tradingdays_path, rts_path;
         time_point last_time, today;
         arma::fmat h5_bid, h5_ask, h5_trade;
         arma::umat h5_bid_volume, h5_ask_volume, h5_trade_volume;
@@ -302,10 +295,8 @@ namespace io::irts {
     template <typename clock_t>
     struct consumer_t : public io::base::consumer_t<clock_t> {
         using base = io::base::consumer_t<clock_t>;
-        using clock       = clock_t;
-        using time_point  = typename clock::time_point;
-        using duration    = typename clock::duration;
-        using base::map, base::fd, base::rts, base::find_or_insert;
+        using typename base::clock, base::duration, base::time_point, base::contract_t;
+        using base::flat_map, base::fd, base::rts, base::I, base::T, base::find_or_insert;
         
         consumer_t(h5::fd_t fd, std::string rts_path, std::string asset_path,
                    std::string tradingdays_path)
@@ -319,24 +310,16 @@ namespace io::irts {
         } catch (const h5::error::any& err) {
             ERROR << err.what() << std::endl;
         }
-        void trade_report(time_point now, uint64_t symbol, float price, uint64_t size, uint8_t /*flag*/) {
+
+        void append(time_point now, uint64_t symbol, float price, uint64_t size, bool is_bid, bool is_trade, bool is_ask) {
             h5::append(irts, iex::tick_t {
                 .time = to_ns(now),
                 .size = size, .price = price, .contract_id = find_or_insert(symbol),
-                .is_trade = true, .is_bid = false, .is_ask = false, .remove_level = false, .reserved = 0});
+                .is_trade = is_trade, .is_bid = is_bid, .is_ask = is_ask, .remove_level = false, .reserved = 0x0});
         }
-        void ask(time_point now, uint64_t symbol, float price, uint64_t size, uint8_t flag) {
-            h5::append(irts, iex::tick_t {
-                .time = to_ns(now),
-                .size = size, .price = price, .contract_id = find_or_insert(symbol),
-                .is_trade = false, .is_bid = false, .is_ask = true, .remove_level = false, .reserved = 0});
-        }
-        void bid(time_point now, uint64_t symbol, float price, uint64_t size, uint8_t flag) {
-            h5::append(irts, iex::tick_t {
-                .time = to_ns(now),
-                .size = size, .price = price, .contract_id = find_or_insert(symbol),
-                .is_trade = false, .is_bid = true, .is_ask = false, .remove_level = false, .reserved = 0});
-        }
+        void bid(time_point now, uint64_t symbol, float price, uint64_t size, uint8_t ) { append(now, symbol, price, size, true, false, false); }
+        void trade_report(time_point now, uint64_t symbol, float price, uint64_t size, uint8_t ) { append(now, symbol, price, size, false, true, false); }
+        void ask(time_point now, uint64_t symbol, float price, uint64_t size, uint8_t ) { append(now, symbol, price, size, false, false, true); }
         void day_end(time_point day) {}
 
         h5::pt_t irts;
