@@ -1,6 +1,6 @@
 #pragma once
 
-#include <unordered_map>
+#include <unordered_set>
 #include <cstdint>
 #include <string>
 #include <iostream>
@@ -8,6 +8,7 @@
 #include <format>
 #include <limits>
 #include <date/date.h>
+#include <algorithm>
 
 #include <error.hpp>
 #include <armadillo>
@@ -103,8 +104,7 @@ namespace io::base {
         void load_index() try {
             if (H5Lexists(fd, asset_path.data(), H5P_DEFAULT) > 0) {
                 instruments = h5::read<std::vector<std::string>>(fd, asset_path);
-                for( std::string symbol: instruments ) 
-                    map.emplace(std::make_pair(* (uint64_t*) symbol.data(), I++));
+                batch_insert(instruments);
             }
             if (H5Lexists(fd, rts_path.data(), H5P_DEFAULT) <= 0) {
                 for(const auto& index: utils::sequence(start, interval, stop))
@@ -125,9 +125,8 @@ namespace io::base {
         void day_begin(time_point day) { begin(day); }
         void day_end(time_point day) try {
             std::vector<std::string> assets;
-            for(const auto[key, value] :map )
-                assets.push_back( to_string(key) );
-            std::sort(assets.begin(), assets.end());
+            for(uint64_t packed_symbol :flat_map )
+                assets.push_back( utils::base40::decode(packed_symbol).first );
             h5::write(fd, asset_path, assets);
         } catch (const h5::error::any err){
             ERROR << err.what() << std::endl;
@@ -141,21 +140,49 @@ namespace io::base {
         void bid(time_point /*t*/, uint64_t /*symbol_id*/, float /*price*/, uint64_t /*size*/, uint8_t /*flag*/) {}
         void trade_break(time_point /*t*/, uint64_t /*symbol_id*/, float /*price*/, uint64_t /*size*/, uint8_t /*flag*/) {}
 
-        uint32_t to_id(uint64_t symbol) {
-            const auto& it = map.find( symbol );
-            return it != map.end() ? it->second : std::numeric_limits<uint32_t>::max();
+        [[nodiscard]] contract_t to_id(uint64_t iex_symbol) {
+            uint64_t base40_encoded_symbol = utils::base40::encode(iex_symbol); // top 50 bits
+            auto it = std::lower_bound(flat_map.begin(), flat_map.end(), base40_encoded_symbol);
+            if (it != flat_map.end() && (*it >> 14) == (base40_encoded_symbol >> 14))
+                return static_cast<contract_t>(*it & MAX_CONTRACT_ID); // extract low 14-bit index
+            return std::numeric_limits<contract_t>::max(); // not found
         }
-        uint32_t find_or_insert(uint64_t symbol) {
-            const auto& it = map.find(symbol);
-            if(it != map.end()) 
-                return it->second;
-            return map[symbol] = I++;
+        
+        contract_t find_or_insert(uint64_t iex_symbol) {
+            uint64_t base40_encoded_symbol = utils::base40::encode(iex_symbol); // top 50 bits
+            auto it = std::lower_bound(flat_map.begin(), flat_map.end(), base40_encoded_symbol);
+        
+            if (it != flat_map.end() && (*it >> 14) == (base40_encoded_symbol >> 14))
+                return static_cast<contract_t>(*it & MAX_CONTRACT_ID); // existing match
+            if (I > MAX_CONTRACT_ID)// Not found: insert with current I in lower 14 bits
+                throw std::overflow_error("Index overflow: exceeded 14-bit ID space");
+        
+            uint64_t packed = (base40_encoded_symbol & (~0ULL << 14)) | I;
+            flat_map.insert(it, packed);  // insert while keeping sorted
+            return I++;
         }
 
+        void batch_insert(const std::vector<std::string>& instruments) {
+            std::unordered_set<std::string_view> seen;
+            for (const auto& symbol : instruments) 
+                if (!seen.insert(symbol).second) throw std::invalid_argument("Duplicate symbol in instruments: " + symbol);
+            
+            flat_map.reserve(flat_map.size() + instruments.size());
+            for (const std::string& symbol : instruments) {
+                uint64_t iex_symbol = 0ULL;
+                if (symbol.size() != 8) throw std::invalid_argument("Symbol must be exactly 8 characters");
+                std::memcpy(&iex_symbol, symbol.data(), 8);
+                if (I > MAX_CONTRACT_ID) throw std::overflow_error("Exceeded 14-bit index capacity");
+                flat_map.push_back(
+                    utils::base40::encode(iex_symbol, I++));
+            }
+            std::ranges::sort(flat_map);
+        }
+        
         h5::fd_t fd;
         std::string rts_path, asset_path, tradingdays_path;
         duration start, stop, interval;
-        std::unordered_map<uint64_t, uint32_t> map;
+        std::vector<uint64_t> flat_map;
         std::vector<std::string> instruments, rts, trading_days;
         contract_t I, T;
         static constexpr contract_t MAX_CONTRACT_ID = (1 << 14) - 1;
