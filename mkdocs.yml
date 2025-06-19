@@ -1,0 +1,35 @@
+site_name: IEX2H5
+docs_dir: docs
+
+nav:
+    - Introduction: index.md
+    - Development: development.md
+    - Consumers: consumers.md
+    - Generics: generics.md
+    - Backtesting: backtesting.md
+    - File Format: file-format.md
+    - Profileing: profile.md 
+    - Download Demo: download-demo.md
+theme:
+    name: material
+    include_sidebar: true
+    custom_dir: docs/overrides
+    highlightjs: true
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - codehilite:
+      guess_lang: false
+      linenums: false
+  - footnotes
+  - toc:
+      permalink: "#"
+      separator: "-"
+
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/asciinema-player@3.0.1/dist/bundle/asciinema-player.js
+
+extra_css:
+  - https://cdn.jsdelivr.net/npm/asciinema-player@3.0.1/dist/bundle/asciinema-player.css
