@@ -1,7 +1,7 @@
 # IEX2H5: IEX TOPS Dataset to HDF5 Converter
 A high-performance C++ utility for converting [IEX Transport Protocol (IEX-TP)][100] packet captures into structured HDF5 datasets, suitable for financial analytics, scientific computation, and time-series processing.
 
-## 📦 Installation
+## Installation
 ```bash
 sudo apt install libhdf5-dev pigz cmake hdf5-tools
 mkdir build && cmake build && cmake ../
@@ -47,7 +47,22 @@ example:
    for file in repo/*.pcap.gz; do unpigz -c ${file} | iex2h5 --command rts -o ${HOME}/iex.h5; done
    iex2h5 --command index
 
-Copyright © <2017-2025> Varga Consulting, Toronto, ON, info@vargaconsulting.ca
+Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
 ```
 
 [100]: https://iextrading.com/trading/market-data/
+[101]: https://www.iexexchange.io/legal/hist-data-terms#:~:text=As%20between%20IEX%20and%20you,and%20exclusive%20property%20of%20IEX.
+[200]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-22.04-gcc-13.svg
+[201]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-22.04-gcc-14.svg
+[202]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-22.04-gcc-15.svg
+[300]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-24.04-gcc-13.svg
+[301]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-24.04-gcc-14.svg
+[302]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-24.04-gcc-15.svg
+[250]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-22.04-clang-17.svg
+[251]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-22.04-clang-18.svg
+[252]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-22.04-clang-19.svg
+[253]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-22.04-clang-20.svg
+[350]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-24.04-clang-17.svg
+[351]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-24.04-clang-18.svg
+[352]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-24.04-clang-19.svg
+[353]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-24.04-clang-20.svg

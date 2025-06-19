@@ -46,3 +46,15 @@ data
 src/iex2h5
 
 build/
+.venv
+site/
+
+/overrides/
+/badges/
+/assets/
+/download-demo/
+/search/
+/spec/
+/.nojekyll
+/*.html
+/*.xml
