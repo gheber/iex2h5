@@ -18,8 +18,8 @@ A high-performance C++ utility for converting [IEX Transport Protocol (IEX-TP)][
 
 ## 📦 Installation
 ```bash
-sudo apt install libhdf5-dev pigz cmake hdf5-tools
-mkdir build && cmake build && cmake ../
+sudo apt install libhdf5-dev pigz
+mkdir build && cd build && cmake ../
 make -j 12 && sudo make install
 ```
 
@@ -49,7 +49,7 @@ Optional arguments:
   --instruments-path   hdf5-group/directory for listed [symbols|assets|financial] instruments [nargs=0..1] [default: "/instruments.txt"]
   --trading-days-path  hdf5-group/directory for active trading days [nargs=0..1] [default: "/trading_days.txt"]
   -g, --gzip           0-9 0 for no compression, 9 for highest [nargs=0..1] [default: 0]
-  -c, --command        init  - intitialises hdf5 container with retrieved symbols from irts/stream
+  -c, --command        init  - intitializes hdf5 container with retrieved symbols from irts/stream
                        irts  - saves captured events as irts stream
                        rts   - converts irts to rts
                        index - scans and rebuilds trading day index
@@ -65,8 +65,11 @@ example:
 Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
 ```
 
+### Notice:
+“[Data provided][100] for free by IEX. By accessing or using IEX Historical Data, you agree to the [IEX Historical Data Terms of Use][101].”
+
 [100]: https://iextrading.com/trading/market-data/
-[101]: https://www.iexexchange.io/legal/hist-data-terms#:~:text=As%20between%20IEX%20and%20you,and%20exclusive%20property%20of%20IEX.
+[101]: https://www.iexexchange.io/legal/hist-data-terms
 [200]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-22.04-gcc-13.svg
 [201]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-22.04-gcc-14.svg
 [202]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-22.04-gcc-15.svg

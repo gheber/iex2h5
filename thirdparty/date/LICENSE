@@ -1,7 +1,16 @@
+The source code in this project is released using the MIT License. There is no
+global license for the project because each file is licensed individually with
+different author names and/or dates.
 
-MIT License
+If you contribute to this project, please add your name to the license of each
+file you modify.  If you have already contributed to this project and forgot to
+add your name to the license, please feel free to submit a new P/R to add your
+name to the license in each file you modified.
 
-Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+For convenience, here is a copy of the MIT license found in each file except
+without author names or dates:
+
+The MIT License (MIT)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -20,6 +29,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-NOTE: This license applies only to original work produced by Varga Consulting.
-Third-party dependencies are bundled in the `thirdparty/` directory and governed by their respective licenses.
