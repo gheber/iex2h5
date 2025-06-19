@@ -5,7 +5,6 @@
 #include <string>
 #include <iostream>
 #include <chrono>
-#include <format>
 #include <limits>
 #include <date/date.h>
 
@@ -18,6 +17,7 @@
 #include <h5cpp/core>
 #include "tick.hpp"
 #include <h5cpp/io>
+#include "compat.hpp"
 
 namespace {
     inline std::string to_string(uint64_t symbol) {
@@ -42,24 +42,24 @@ namespace io::stats {
         consumer_t(h5::fd_t fd) {}
         void heart_beat(time_point tp) {}
         void begin(time_point tp) {
-            INFO << std::format("[begin] {}", date::format("%F %T", date::floor<std::chrono::seconds>(tp))) << std::endl;
+            INFO << fmt_compat::format("[begin] {}", date::format("%F %T", date::floor<std::chrono::seconds>(tp))) << std::endl;
         }
 
         void end(time_point tp) {
-            INFO << std::format("[end] {}",  date::format("%F %T", date::floor<std::chrono::seconds>(tp))) << std::endl;
+            INFO << fmt_compat::format("[end] {}",  date::format("%F %T", date::floor<std::chrono::seconds>(tp))) << std::endl;
             for (const auto& [id, data] : trades)
-                INFO << std::format("  symbol {:6d}: {} trades, avg price {:.4f}, total size {}",
+                INFO << fmt_compat::format("  symbol {:6d}: {} trades, avg price {:.4f}, total size {}",
                     id, data.count, data.total_price / data.total_size, data.total_size) << std::endl;
         }
 
         void day_begin(time_point day) {
-            INFO << std::format("[day_begin] {}", date::format("%F %T", date::floor<std::chrono::seconds>(day))) << std::endl;
+            INFO << fmt_compat::format("[day_begin] {}", date::format("%F %T", date::floor<std::chrono::seconds>(day))) << std::endl;
             begin(day);
         }
 
         void day_end(time_point day) {
             end(day);
-            INFO << std::format("[day_end] {}", date::format("%F %T", date::floor<std::chrono::seconds>(day))) << std::endl;
+            INFO << fmt_compat::format("[day_end] {}", date::format("%F %T", date::floor<std::chrono::seconds>(day))) << std::endl;
         }
 
         void trade_report(time_point /*t*/, uint64_t symbol_id, float price, uint64_t size, uint8_t /*flag*/) {

@@ -19,11 +19,11 @@
 #include <sstream>
 #include <chrono>
 #include <cmath>
-#include <format>
 #include <stdexcept>
 #include <concepts>
 #include <armadillo>
-
+#include <date/date.h> 
+#include "compat.hpp"
 namespace utils {
 	namespace ch = std::chrono;
 
@@ -85,8 +85,7 @@ namespace utils {
 	// ─────────────────────────────────────────────────────────────────────────────
 	template <typename duration>
 	std::string duration_to_string(const duration& dur) {
-		auto secs = ch::duration_cast<ch::seconds>(dur);
-		ch::hh_mm_ss time(secs);
-		return std::format("{:%H:%M:%S}", time);
+		using namespace std::chrono;
+		return date::format("%H:%M:%S", date::floor<seconds>(dur));
 	}
 } // namespace util

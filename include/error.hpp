@@ -14,7 +14,6 @@
  */
 #pragma once
 
-#include <format>
 #include <string>
 #include <iostream>
 #include <string_view>
@@ -26,6 +25,7 @@
 #include <syslog.h>
 #include <date/date.h>
 #include <date/tz.h> 
+#include "compat.hpp"
 namespace  {
     inline std::string basename__(const std::string& path) {
         size_t pos = path.find_last_of('/');
@@ -65,11 +65,11 @@ namespace sigma::syslog {
 
 #ifdef DEBUG 
     #define SIGMA_LOGGER_PREAMBLE \
-        std::format("{:40}", std::format("[{:12} {:5}:{:<5} {:8}/{:<8} {:>15} #{:05}] ", \
+        fmt_compat::format("{:40}", fmt_compat::format("[{:12} {:5}:{:<5} {:8}/{:<8} {:>15} #{:05}] ", \
         time_stamp__(), getgid(), getuid(), getpid(), gettid(), basename__(__FILE__),  __LINE__ ))
 #else
     #define SIGMA_LOGGER_PREAMBLE \
-        std::format("{:40}", std::format("[{} {:>15} #{:05}] ", time_stamp__(),  basename__(__FILE__),  __LINE__ ))
+        fmt_compat::format("{:40}", fmt_compat::format("[{} {:>15} #{:05}] ", time_stamp__(),  basename__(__FILE__),  __LINE__ ))
 #endif
 
 #ifdef DEBUG 
@@ -89,10 +89,10 @@ namespace sigma::syslog {
 #ifdef H5CPP_ERROR_MSG
     #undef H5CPP_ERROR_MSG
 #endif
-#define H5CPP_ERROR_MSG( msg ) std::format("{} #{:05} {}", basename__(__FILE__),  __LINE__ , msg)
+#define H5CPP_ERROR_MSG( msg ) fmt_compat::format("{} #{:05} {}", basename__(__FILE__),  __LINE__ , msg)
 #ifndef RUNTIME_ERROR 
     #define RUNTIME_ERROR(msg) std::runtime_error( \
-        std::format("{} {}", static_cast<std::string>(SIGMA_LOGGER_PREAMBLE), static_cast<std::string>(msg)))
+        fmt_compat::format("{} {}", static_cast<std::string>(SIGMA_LOGGER_PREAMBLE), static_cast<std::string>(msg)))
 #endif
 #ifndef THROW_RUNTIME_ERROR 
     #define THROW_RUNTIME_ERROR(msg) throw RUNTIME_ERROR(msg)
