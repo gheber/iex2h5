@@ -33,7 +33,7 @@ namespace generics {
         using resize_3_args_t = decltype(std::declval<T&>().resize(size_t{}, size_t{}, size_t{}));
     
         template <typename T>
-        using resize_size_obj_t = decltype(std::declval<T&>().resize(arma::SizeMat{}));
+        using resize_size_obj_t = decltype(std::declval<T&>().resize(arma::SizeMat{1,1}));
     
         template <typename T, template <typename> typename Op, typename = void>
         inline constexpr bool is_detected_v = false;

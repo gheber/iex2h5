@@ -10,7 +10,7 @@
 #define PCAP_SUPPORT_USB 1
 #define PCAP_SUPPORT_BPF 1
 #define HAVE_STRERROR 1
-#define HAVE_STRLCPY 1
+#define HAVE_STRLCPY 0
 #define HAVE_STRLCAT 1
 
 #define HAVE_SOCKLEN_T 0
