@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
 			if (std::next(it) != dispatch.end())
 				oss << ", ";
 		}
-		std::cerr << std::format("unknown command `{}` please use any of the following: `{}`", cmd, oss.str()) << std::endl;
+		std::cerr << "unknown command " << cmd << " please use any of the following: `" << oss.str() << "`" << std::endl;
 	} catch( const std::exception& err ) {
 		cout << err.what() << endl;
         cout << program << endl;
