@@ -16,7 +16,7 @@ set(name rediscpp)
 set(libname lib${name}_static)
 project(${libname} LANGUAGES CXX C)
 
-set(current_version_dir "v1.3.11")
+set(current_version_dir "v1.3.14")
 set(all_source_files command.cpp command_options.cpp connection.cpp connection_pool.cpp crc16.cpp
     errors.cpp pipeline.cpp redis.cpp redis_cluster.cpp redis_uri.cpp reply.cpp sentinel.cpp
     shards.cpp shards_pool.cpp subscriber.cpp transaction.cpp)
