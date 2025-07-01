@@ -37,7 +37,7 @@ add_definitions(
   -DSTAT_PRECISION=4
   -DIEX_MAX_SYMBOLS=20000)
 
-## begin sigma thirdparty library dependencies
+## begin thirdparty library dependencies
   add_subdirectory(thirdparty)
 ## end library dependencies
 
