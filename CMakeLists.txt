@@ -42,7 +42,6 @@ add_definitions(
 ## end library dependencies
 
 include(FindHDF5)
-
 find_package(Threads REQUIRED)
 find_package(ZLIB REQUIRED QUIET)
 
@@ -82,6 +81,12 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
   endfunction()
 
   add_test_case(example)
+  add_test_case(utils)
+  add_test_case(base76)
+  add_test_case(filters)
+  add_test_case(error)
+  add_test_case(generics)
+  add_test_case(producers)
 endif()
 
 add_subdirectory(src)
