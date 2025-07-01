@@ -1,8 +1,7 @@
-/*
- * Copyright (c) 2018 vargaconsulting, Toronto,ON Canada
- * Author: Varga, Steven <steven@vargaconsulting.ca>
- *
- */
+/* This file is part of the H5CPP project and is licensed under the MIT License.
+ * 
+ * Copyright © 2018–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+ * Contact: info@vargaconsulting.ca */
 
 #ifndef  H5CPP_PALL_HPP
 #define  H5CPP_PALL_HPP
@@ -64,7 +63,7 @@ namespace h5 { namespace impl {
 			//int i = capi_call + 1;
 			/*CAPI needs `this` hid_t id passed along */
 			capi_t capi_args = std::tuple_cat( std::tie(id), args );
-			H5CPP_CHECK_NZ( compat::apply(capi_call, capi_args),
+			H5CPP_CHECK_NZ( h5::compat::apply(capi_call, capi_args),
 					h5::error::property_list::argument,"failed to parse arguments...");
 		}
 
@@ -168,7 +167,7 @@ const static h5::file_space_page_strategy strategy_aggr{H5F_FSPACE_STRATEGY_AGGR
 const static h5::file_space_page_strategy strategy_none{H5F_FSPACE_STRATEGY_NONE};
 */
 	#ifdef H5_HAVE_PARALLEL
-		const static h5::file_space_page_strategy strategy_page{H5F_FSPACE_STRATEGY_PAGE};
+		// const static h5::file_space_page_strategy strategy_page{H5F_FSPACE_STRATEGY_PAGE};
 	#endif
 #endif
 

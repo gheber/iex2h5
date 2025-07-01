@@ -1,13 +1,10 @@
-/*
- * Copyright (c) 2018 vargaconsulting, Toronto,ON Canada
- * Author: Varga, Steven <steven@vargaconsulting.ca>
- *
- */
-
+/* This file is part of the H5CPP project and is licensed under the MIT License.
+ * 
+ * Copyright © 2018–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+ * Contact: info@vargaconsulting.ca */
 
 #ifndef  H5CPP_IALL_HPP
 #define  H5CPP_IALL_HPP
-
 
 #ifdef H5CPP_CONVERSION_IMPLICIT
 	#define H5CPP__EXPLICIT
@@ -81,9 +78,20 @@ namespace h5 { namespace impl { namespace detail {
 				H5Iinc_ref( handle );
 		}
 		hid_t& operator =( const hid_t& ref) {
+            if (this == &ref) return *this;
+            if( H5Iis_valid( handle ) )
+                capi_close( handle );
 			handle = ref.handle;
 			if( H5Iis_valid( handle ) )
 				H5Iinc_ref( handle );
+			return *this;
+		}
+        hid_t& operator =( hid_t&& ref) {
+            if (this == &ref) return *this;
+            if( H5Iis_valid( handle ) )
+                capi_close( handle );
+			handle = ref.handle;
+            ref.handle = H5I_UNINIT;
 			return *this;
 		}
 		/* move ctor must invalidate old handle */
@@ -92,9 +100,8 @@ namespace h5 { namespace impl { namespace detail {
 			ref.handle = H5I_UNINIT;
 		}
 		~hid_t(){
-			::herr_t err = 0;
 			if( H5Iis_valid( handle ) )
-				err = capi_close( handle );
+				capi_close( handle );
 		}
 		protected:
 		::hid_t handle;
@@ -161,7 +168,7 @@ namespace h5 { namespace impl { namespace detail {
 		};
 
 		template <class V> at_t operator=( V arg  );
-		template <class V> at_t operator=( const std::initializer_list<V> args  ){ return V();};
+		template <class V> at_t operator=( const std::initializer_list<V> args  ){return at_t{H5I_UNINIT}; };
 
 		::hid_t ds;
 		std::string name;

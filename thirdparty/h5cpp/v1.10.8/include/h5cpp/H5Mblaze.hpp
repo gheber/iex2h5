@@ -1,9 +1,8 @@
+/* This file is part of the H5CPP project and is licensed under the MIT License.
+ * 
+ * Copyright © 2018–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+ * Contact: info@vargaconsulting.ca */
 
-/*
- * Copyright (c) 2018 vargaconsulting, Toronto,ON Canada
- * Author: Varga, Steven <steven@vargaconsulting.ca>
- *
- */
 #ifndef  H5CPP_BLAZE_HPP 
 #define  H5CPP_BLAZE_HPP
 

@@ -1,8 +1,7 @@
-/*
- * Copyright (c) 2018 vargaconsulting, Toronto,ON Canada
- * Author: Varga, Steven <steven@vargaconsulting.ca>
-
- */
+/* This file is part of the H5CPP project and is licensed under the MIT License.
+ * 
+ * Copyright © 2018–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+ * Contact: info@vargaconsulting.ca */
 
 #ifndef  H5CPP_ZALL_HPP
 #define  H5CPP_ZALL_HPP
@@ -49,7 +48,7 @@ namespace h5 { namespace impl { namespace filter {
 	}
 	inline size_t gzip( void* dst, const void* src, size_t size, unsigned flags, size_t n, const unsigned params[]){
 		size_t nbytes = size;
-		int ret = compress2( (unsigned char*)dst, &nbytes, (const unsigned char*)src, size, params[0]);
+		compress2( (unsigned char*)dst, &nbytes, (const unsigned char*)src, size, params[0]);
 		return nbytes;
 	}
 	inline size_t szip( void* dst, const void* src, size_t size, unsigned flags, size_t n, const unsigned params[]){

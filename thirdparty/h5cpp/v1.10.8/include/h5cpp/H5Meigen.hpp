@@ -1,11 +1,15 @@
+/* This file is part of the H5CPP project and is licensed under the MIT License.
+ * 
+ * Copyright © 2018–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+ * Contact: info@vargaconsulting.ca */
 
-/*
- * Copyright (c) 2018 vargaconsulting, Toronto,ON Canada
- * Author: Varga, Steven <steven@vargaconsulting.ca>
- *
- */
 #ifndef  H5CPP_EIGEN_HPP 
 #define H5CPP_EIGEN_HPP
+#include <hdf5.h>
+#include "H5Tmeta.hpp"
+#include <tuple>
+#include <type_traits>
+#include <array>
 
 #if defined(EIGEN_CORE_H) || defined(H5CPP_USE_EIGEN3)
 /*
@@ -17,10 +21,18 @@
        int MaxColsAtCompileTime = ColsAtCompileTime>
 */
 
+namespace h5::meta {
+
+    template<class T,int R,int C, int O> struct is_contiguous<::Eigen::Matrix<T,R,C,O>> : std::true_type {};
+    template<class T,int R,int C, int O> struct is_contiguous<::Eigen::Array<T,R,C,O>> : std::true_type {};
+}
+
 namespace h5 { namespace impl {
 	// 1.) object -> H5T_xxx
 	template<class T,int R,int C, int O> struct decay<::Eigen::Matrix<T,R,C,O>>{ typedef T type; };
 	template<class T,int R,int C, int O> struct decay<::Eigen::Array<T,R,C,O>>{ typedef T type; };
+	    
+
 	// TODO: remove const_cast
 	// get read access to datastaore
 	template<class T,int R,int C,int O, int MR=R,int MC=C>
