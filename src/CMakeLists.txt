@@ -32,7 +32,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug" OR CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo"
     add_custom_command(
         OUTPUT ${IEX_H5}
         COMMAND ${CMAKE_COMMAND} -E echo "Generating ${IEX_H5} from ${INIT_PCAP}"
-        COMMAND unpigz -c ${DATA_PCAP} | $<TARGET_FILE:${PROGRAM_NAME}> --command init -o ${IEX_H5}
+        COMMAND $<TARGET_FILE:${PROGRAM_NAME}> --command init -o ${IEX_H5}
         DEPENDS ${PROGRAM_NAME}
         COMMENT "Generating ${IEX_H5} from TOPS data"
         VERBATIM

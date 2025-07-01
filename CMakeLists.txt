@@ -56,6 +56,7 @@ list(APPEND LIBS
   libargparse libarmadillo libh5cpp libdate_static libfmt_static libhiredis_static librediscpp_static libpcap_static)
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
+  set(IEX_PCAP_FILE "${CMAKE_SOURCE_DIR}/data/iex-packets.pcap")
   set(CMAKE_CXX_FLAGS "-fsanitize=address,undefined,bounds,float-divide-by-zero,float-cast-overflow,alignment -Wall -Wextra -Wpedantic -Werror")
   add_definitions(-DDEBUG) # -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC !!! will break AWS !!!
   enable_testing()
@@ -70,7 +71,8 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
       add_executable(${test_name} test/${file_name}.cpp)
       target_include_directories(${test_name} PRIVATE ${INCLUDE_DIRS} src)
       target_compile_options(${test_name} PRIVATE -w)
-      
+      target_compile_definitions(${test_name} PRIVATE IEX_PCAP_FILE="${IEX_PCAP_FILE}")
+
       # Link libraries, excluding INTERFACE libraries
       target_link_libraries(${test_name} PRIVATE ${LIBS} libdoctest)
       foreach(lib IN LISTS ARG_LIBRARIES)
