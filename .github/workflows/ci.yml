@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ release ]
+    branches: [ release, staging ]
   pull_request:
-    branches: [ release ]
+    branches: [ release, staging ]
 
 jobs:
   build:
@@ -33,6 +33,15 @@ jobs:
             compiler-version: 20
     steps:
     - uses: actions/checkout@v4
+
+    - name: Set badge output directory
+      id: path
+      run: |
+        if [[ "${GITHUB_REF##*/}" == "staging" ]]; then
+          echo "dir=status-staging" >> $GITHUB_OUTPUT
+        else
+          echo "dir=status" >> $GITHUB_OUTPUT
+        fi
 
     - name: Check skip list
       id: skip_check
@@ -132,6 +141,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Determine badge target directory
+        id: badge_dir
+        run: |
+          if [[ "${GITHUB_REF##*/}" == "staging" ]]; then
+            echo "dir=badges-staging" >> $GITHUB_OUTPUT
+          else
+            echo "dir=badges" >> $GITHUB_OUTPUT
+          fi
+
       - name: Download all badge status artifacts
         uses: actions/download-artifact@v4
         with:
@@ -141,7 +159,7 @@ jobs:
 
       - name: Generate SVG Badges
         run: |
-          mkdir -p badges
+          mkdir -p ${{ steps.badge_dir.outputs.dir }}
           for f in badge-status/*.json; do
             echo "file name: $f"
             [[ ! -f "$f" ]] && continue
@@ -151,13 +169,13 @@ jobs:
 
             color="gray"
             symbol="□"
-            
+
             [[ "$status" == "success" ]] && { symbol="✔"; color="green"; prefix="ok"; }
             [[ "$status" == "skipped" ]] && { symbol="○"; color="gray";  prefix="na"; }
             [[ "$status" == "failure" ]] && { symbol="✘"; color="red";   prefix="failed"; }
 
             label="${os}-${compiler}"
-            badge="badges/${label}.svg"
+            badge="${{ steps.badge_dir.outputs.dir }}/${label}.svg"
             echo "https://img.shields.io/badge/${prefix}-${symbol}-${color}.svg  $badge"
             curl -s "https://img.shields.io/badge/${prefix}-${symbol}-${color}.svg" -o "$badge"
           done
@@ -166,5 +184,5 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./badges
-          destination_dir: badges
+          publish_dir: ./${{ steps.badge_dir.outputs.dir }}
+          destination_dir: ${{ steps.badge_dir.outputs.dir }}
