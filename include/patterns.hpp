@@ -78,4 +78,8 @@ namespace io {
 		producer_t() = default;
 		friend derived_t;
 	};
+	template<typename T>
+	concept stream_t = requires(T stream, uint8_t* ptr, size_t size) {
+		{ stream.pull(ptr, size) } -> std::convertible_to<size_t>;
+	};
 } // namespace io

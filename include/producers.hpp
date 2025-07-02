@@ -2,6 +2,22 @@
  * 
  * Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
  * Contact: info@vargaconsulting.ca */
+
+#pragma once
+
+#include <cstdint>
+#include <functional>
+#include <array>
+#include <stdexcept>
+#include <cstring>
+#include <span>
+#include <sys/time.h>
+#include <bit>
+#include <error.hpp>
+#include <utils.hpp>
+#include <iex.hpp>
+#include <zlib-ng.h>
+
 namespace io::stream {
 	struct file_t {
 		explicit file_t(FILE* fd) : fd(fd) {}
@@ -12,6 +28,68 @@ namespace io::stream {
 	private:
 		FILE* fd; /*!< underlying file descriptor, not owned */
 	};
+	struct gzip_t {
+		explicit gzip_t(FILE* fd) : fd(fd) {
+			if (zng_inflateInit2(&strm, 31) != Z_OK)
+				THROW_RUNTIME_ERROR("zng_inflateInit2 failed");
+		}
+
+		~gzip_t() {
+			zng_inflateEnd(&strm);  // wraps zng_inflateEnd for compatibility
+		}
+
+		[[nodiscard]] size_t pull(uint8_t* dst, size_t len) {
+			size_t total = 0;
+			while (total < len) {
+				if (decompressed_pos == decompressed_end)
+					if (!replenish()) break;
+
+				size_t available = decompressed_end - decompressed_pos;
+				size_t n = std::min(len - total, available);
+				std::memcpy(dst + total, decompressed_buffer.data() + decompressed_pos, n);
+				decompressed_pos += n;
+				total += n;
+			}
+			return total;
+		}
+
+		bool replenish() {
+			if (stream_ended) return false;
+
+			// Pull compressed input
+			strm.avail_in = std::fread(compressed_buffer.data(), 1, compressed_buffer.size(), fd);
+			if (ferror(fd))
+				THROW_RUNTIME_ERROR("fread failed while decompressing gzip");
+			if (strm.avail_in == 0) {
+				stream_ended = true;
+				return false;
+			}
+			strm.next_in = compressed_buffer.data();
+
+			strm.avail_out = decompressed_buffer.size();
+			strm.next_out = decompressed_buffer.data();
+
+			int ret = zng_inflate(&strm, Z_NO_FLUSH);
+			if (ret == Z_STREAM_END) stream_ended = true;
+			else if (ret != Z_OK && ret != Z_BUF_ERROR)
+				THROW_RUNTIME_ERROR("zng_inflate failed: " + std::to_string(ret));
+
+			decompressed_pos = 0;
+			decompressed_end = decompressed_buffer.size() - strm.avail_out;
+			return decompressed_end > 0;
+		}
+
+	private:
+		FILE* fd; /*!< backing compressed input stream (not owned) */
+		bool stream_ended = false; /*!< true if end-of-stream was reached */
+		std::array<uint8_t, 1 << 16> compressed_buffer;   /*!< input buffer (65 KiB) */
+		std::array<uint8_t, 1 << 20> decompressed_buffer; /*!< output buffer (1 MiB) */
+		size_t decompressed_pos = 0;  /*!< current read offset into decompressed buffer */
+		size_t decompressed_end = 0;  /*!< end of valid decompressed data */
+		zng_stream strm{}; /*!< zlib-ng decompression state */
+	};
+}
+
 namespace iex::pcap {
 	struct packet {
 		uint8_t ethernet_frame[14];  /*!< Ethernet header: destination MAC, source MAC, EtherType */
