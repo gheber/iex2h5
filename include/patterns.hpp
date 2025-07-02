@@ -7,6 +7,7 @@
 
 #include <chrono>
 #include <concepts>
+#include <cstdint>
 #include <string>
 #include <functional>
 namespace io {
@@ -29,8 +30,6 @@ namespace io {
 		uint64_t size,
 		uint8_t flag) {
 		c.heart_beat(tp);
-		c.begin(tp);
-		c.end(tp);
 		c.day_begin(tp);
 		c.day_end(tp);
 		c.trade_report(tp, stock, price, size, flag);
@@ -72,7 +71,7 @@ namespace io {
 		void bid(time_point t, uint64_t s, float p, uint64_t z, uint8_t f)          { consumer->bid(t, s, p, z, f); }
 		void trade_break(time_point t, uint64_t s, float p, uint64_t z, uint8_t f)  { consumer->trade_break(t, s, p, z, f); }
 
-		duration start{}, stop{}, heart_beat_interval{};
+		duration start, stop, heart_beat_interval;
 	private:
 		consumer_t* consumer = nullptr;
 		producer_t() = default;
