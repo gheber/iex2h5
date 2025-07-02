@@ -12,9 +12,6 @@
 #include <functional>
 namespace io {
 
-	// ─────────────────────────────────────────────────────────────────────────────
-	// Concepts
-	// ─────────────────────────────────────────────────────────────────────────────
 	template <typename T>
 	concept has_clock = requires {
 		typename T::clock;
@@ -43,10 +40,6 @@ namespace io {
 		typename C::clock::duration start, typename C::clock::duration stop) {
 		p.run(consumer, start, stop);
 	};
-
-	// ─────────────────────────────────────────────────────────────────────────────
-	// Producer CRTP
-	// ─────────────────────────────────────────────────────────────────────────────
 	template <typename derived_t, consumer_concept consumer_t>
 	struct producer_t {
 		using type       = derived_t;
@@ -77,6 +70,7 @@ namespace io {
 		producer_t() = default;
 		friend derived_t;
 	};
+
 	template<typename T>
 	concept stream_t = requires(T stream, uint8_t* ptr, size_t size) {
 		{ stream.pull(ptr, size) } -> std::convertible_to<size_t>;

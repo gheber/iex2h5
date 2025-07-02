@@ -19,8 +19,10 @@
 #include <zlib-ng.h>
 
 namespace io::stream {
+
 	struct file_t {
 		explicit file_t(FILE* fd) : fd(fd) {}
+
 		[[nodiscard]] size_t pull(uint8_t* dst, size_t max) {
 			return std::fread(dst, 1, max, fd);
 		}
@@ -28,7 +30,9 @@ namespace io::stream {
 	private:
 		FILE* fd; /*!< underlying file descriptor, not owned */
 	};
+	
 	struct gzip_t {
+
 		explicit gzip_t(FILE* fd) : fd(fd) {
 			if (zng_inflateInit2(&strm, 31) != Z_OK)
 				THROW_RUNTIME_ERROR("zng_inflateInit2 failed");
@@ -114,11 +118,13 @@ namespace iex::pcap {
 		uint32_t original;  /**< Original length of the packet on the wire */
 	} __attribute__((packed));
 
+
 	template <class stream, class consumer>
 	struct producer_t : public stream, public transport_t<consumer> {
 		using type = producer_t<stream, consumer>;
 		using duration = typename consumer::duration;
 		using callback_t = std::function<size_t(uint8_t*, size_t)>;
+
 		explicit producer_t(FILE* fd, duration heart_beat)
 		: stream(fd) {
 			this->heart_beat_interval = heart_beat;
@@ -149,6 +155,7 @@ namespace iex::pcap {
 				<< (utils::pcap::is_little_endian(global_header.magic_number) ? "little-endian" : "big-endian")
 				<< " " << ts_precision << " resolution" << std::endl;
 		}
+
 		void run_impl() {
 			while (read_exact(reinterpret_cast<uint8_t*>(&packet_header), sizeof(packet_header))) {
 				if (packet_header.captured > buffer.size())
@@ -167,6 +174,7 @@ namespace iex::pcap {
 		}
 
 	private:
+
 		bool read_exact(uint8_t* dst, size_t len) {
 			size_t total = 0;
 			while (total < len) {

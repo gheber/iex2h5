@@ -26,13 +26,13 @@ target_link_libraries(${PROGRAM_NAME} PRIVATE ${LIBS})
 if(CMAKE_BUILD_TYPE MATCHES "Debug" OR CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
     set(IEX_H5 "$ENV{HOME}/iex.h5")
     set(DATA_DIR "${CMAKE_SOURCE_DIR}/data")
-    set(DATA_PCAP "${DATA_DIR}/TOPS-2017-01-06.pcap.gz")
+    set(DATA_PCAP "${DATA_DIR}/iex-packets.pcap.gz")
 
     # init-iexh5 target: creates $HOME/iex.h5 using one known pcap file
     add_custom_command(
         OUTPUT ${IEX_H5}
         COMMAND ${CMAKE_COMMAND} -E echo "Generating ${IEX_H5} from ${INIT_PCAP}"
-        COMMAND unpigz -c ${DATA_PCAP} | $<TARGET_FILE:${PROGRAM_NAME}> --command init -o ${IEX_H5}
+        COMMAND $<TARGET_FILE:${PROGRAM_NAME}> --command init -o ${IEX_H5}
         DEPENDS ${PROGRAM_NAME}
         COMMENT "Generating ${IEX_H5} from TOPS data"
         VERBATIM

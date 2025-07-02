@@ -41,8 +41,9 @@ namespace utils::base76::impl {
     constexpr uint8_t symbol_char_to_index(char c) {
         return (c >= 0 && c < 128 && CHAR_TO_INDEX[c] != -1)
             ? static_cast<uint8_t>(CHAR_TO_INDEX[c])
-            : throw std::invalid_argument( std::format("invalid base76 symbol char {}", c ) );
+            : throw std::invalid_argument( fmt_compat::format("invalid base76 symbol char {}", c ) );
     }
+
     inline uint64_t encode(uint64_t raw_symbol) {
         constexpr uint8_t terminator_index = symbol_char_to_index('\0');
         uint64_t result = 0;
@@ -55,6 +56,7 @@ namespace utils::base76::impl {
         }
         return result;
     }
+
     inline uint64_t encode(const std::string& symbol) {
         if (symbol.size() > SYMBOL_WIDTH)
             throw std::invalid_argument("symbol too long for base76 encoding");
@@ -62,6 +64,7 @@ namespace utils::base76::impl {
         std::memcpy(&raw_symbol, symbol.data(), symbol.size());
         return encode(raw_symbol);
     }
+
     inline std::string decode(uint64_t encoded) {
         std::string result(SYMBOL_WIDTH, ' ');
         for (size_t i = 0; i < SYMBOL_WIDTH; ++i) {
@@ -74,14 +77,16 @@ namespace utils::base76::impl {
 } // namespace utils::base76::impl
 
 namespace utils::base76 {
-     using impl::SYMBOL_WIDTH;
+    using impl::SYMBOL_WIDTH;
  
     inline uint64_t encode(const std::string& symbol, uint16_t index) {
         return (impl::encode(symbol) << 14) | (index & 0x3FFF);
     }
+
     inline uint64_t encode(const std::string& symbol) {
         return (impl::encode(symbol) << 14);
     }
+
     inline uint64_t encode(uint64_t iex_symbol, uint16_t index) {
         return (impl::encode(iex_symbol) << 14) | (index & 0x3FFF);
     }
@@ -89,6 +94,7 @@ namespace utils::base76 {
     inline uint64_t encode(uint64_t iex_symbol) {
         return (impl::encode(iex_symbol) << 14);
     }
+
     inline std::pair<std::string, uint16_t> decode(uint64_t encoded) {
         uint64_t symbol_bits = encoded >> 14;
         uint16_t index = encoded & 0x3FFF;

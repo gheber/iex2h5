@@ -25,6 +25,7 @@
 
 namespace utils {
 	namespace ch = std::chrono;
+    
     inline std::string iex_symbol(uint64_t iex_symbol) {
         return std::string(reinterpret_cast<const char*>(&iex_symbol), 8);
     }
@@ -217,7 +218,7 @@ namespace utils::pcap {
     inline constexpr uint32_t MAGIC_NATIVE_NSEC = 0xa1b23c4d;
     inline constexpr uint32_t MAGIC_SWAP_USEC = 0xd4c3b2a1;
     inline constexpr uint32_t MAGIC_SWAP_NSEC = 0x4d3cb2a1;
-    
+
     inline bool is_little_endian(uint32_t magic) {
         if (std::endian::native == std::endian::little){
             return (magic == 0xa1b2c3d4 || magic == 0xa1b23c4d);
@@ -245,7 +246,6 @@ namespace utils::pcap {
 } // namespace utils::pcap
 
 namespace utils {
-
     inline std::string trim(const std::string& str) {
         auto front = std::find_if_not(str.begin(), str.end(), [](int c) { return std::isspace(c); });
         auto back  = std::find_if_not(str.rbegin(), str.rend(), [](int c) { return std::isspace(c); }).base();
@@ -266,7 +266,6 @@ namespace utils {
         });
         return from;
     }
-} // namespace utils::pcap
 
     inline std::vector<std::string> split(const std::string& s, char delimiter) {
         std::vector<std::string> tokens;

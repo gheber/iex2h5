@@ -2,7 +2,8 @@
  * 
  * Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
  * Contact: info@vargaconsulting.ca */
-#pragma once
+
+ #pragma once
 
 #include <string>
 #include <iostream>

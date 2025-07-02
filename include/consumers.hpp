@@ -214,7 +214,6 @@ namespace io::rts {
             append(time, id, price, size, true, false, false); 
         }
         void on_heart_beat(time_point time) {
-            TRACE << time << " " << slot << std::endl;
             auto tp = date::format("%H:%M:%S", date::floor<std::chrono::seconds>(time));
             h5_ask(slot, arma::span::all) = fask.predict(), h5_bid(slot, arma::span::all) = fbid.predict();
             h5_trade(slot, arma::span::all) = ftrade.predict();

@@ -42,7 +42,6 @@ add_definitions(
 ## end library dependencies
 
 include(FindHDF5)
-
 find_package(Threads REQUIRED)
 find_package(ZLIB REQUIRED QUIET)
 
@@ -58,6 +57,7 @@ list(APPEND LIBS
   )
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
+  set(IEX_PCAP_FILE "${CMAKE_SOURCE_DIR}/data/iex-packets.pcap")
   set(CMAKE_CXX_FLAGS "-fsanitize=address,undefined,bounds,float-divide-by-zero,float-cast-overflow,alignment -Wall -Wextra -Wpedantic -Werror")
   add_definitions(-DDEBUG) # -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC !!! will break AWS !!!
   enable_testing()
@@ -72,7 +72,8 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
       add_executable(${test_name} test/${file_name}.cpp)
       target_include_directories(${test_name} PRIVATE ${INCLUDE_DIRS} src)
       target_compile_options(${test_name} PRIVATE -w)
-      
+      target_compile_definitions(${test_name} PRIVATE IEX_PCAP_FILE="${IEX_PCAP_FILE}")
+
       # Link libraries, excluding INTERFACE libraries
       target_link_libraries(${test_name} PRIVATE ${LIBS} libdoctest)
       foreach(lib IN LISTS ARG_LIBRARIES)
@@ -82,6 +83,12 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
   endfunction()
 
   add_test_case(example)
+  add_test_case(utils)
+  add_test_case(base76)
+  add_test_case(filters)
+  add_test_case(error)
+  add_test_case(generics)
+  add_test_case(producers)
 endif()
 
 add_subdirectory(src)
