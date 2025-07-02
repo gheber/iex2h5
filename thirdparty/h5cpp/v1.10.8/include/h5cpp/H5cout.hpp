@@ -1,17 +1,12 @@
-/*
- * Copyright (c) 2018 vargaconsulting, Toronto,ON Canada
- * Author: Varga, Steven <steven@vargaconsulting.ca>
- *
- */
+/* This file is part of the H5CPP project and is licensed under the MIT License.
+ * 
+ * Copyright © 2018–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+ * Contact: info@vargaconsulting.ca */
 
 #ifndef  H5CPP_STD_COUT
 #define  H5CPP_STD_COUT
 
-
-
-
-inline
-std::ostream& operator<< (std::ostream& os, const h5::dxpl_t& dxpl) {
+inline std::ostream& operator<< (std::ostream& os, const h5::dxpl_t& dxpl) {
 	os <<"handle: " << static_cast<hid_t>( dxpl );
 #ifdef H5_HAVE_PARALLEL
 	H5D_mpio_actual_io_mode_t io_mode;
@@ -73,24 +68,33 @@ std::ostream& operator<<(std::ostream &os, const h5::sp_t& sp) {
 	h5::max_dims_t max_dims;
 	unsigned rank = h5::get_simple_extent_dims( sp, current_dims, max_dims);
 	hsize_t total_elements = H5Sget_simple_extent_npoints( id );
- 	herr_t err = H5Sget_select_bounds(id, *start, *end);
+ 	H5Sget_select_bounds(id, *start, *end);
 	start.rank = end.rank = rank;
 	hsize_t nblocks =  H5Sget_select_hyper_nblocks( id );
+	hssize_t nelements = H5Sget_select_elem_npoints( id );
 	hsize_t ncoordinates = 2*rank*nblocks;
+
+	// if slection valid
+	std::string is_valid;
+	htri_t is_valid_ = H5Sselect_valid(id);
+	if(is_valid_ > 0 ) is_valid = "within extent";
+	if(is_valid_ == 0 ) is_valid = "not in extent";
+	if(is_valid_ < 0 ) is_valid = "error occured";
 
     os << "[rank]\t" << rank << "\t[total elements]\t" << total_elements << std::endl;
    	os << "[dimensions]\tcurrent: " << current_dims << "\tmaximum: " << max_dims << std::endl;
 	os << "[selection]\tstart: " << start << "\tend:" << end << std::endl;
-
+	os << "[selection]\t" << is_valid <<std::endl;
 	h5::impl::unique_ptr<hsize_t> buffer{
 			static_cast<hsize_t*>( std::calloc( ncoordinates, sizeof(hsize_t))) };
 	if( H5Sget_select_hyper_blocklist(id, 0, nblocks, buffer.get() ) >= 0   ){
+		os << "[selected element count]\t" << nelements << std::endl; 
 		os << "[selected block count]\t" << nblocks <<std::endl;
 		os << "[selected blocks]\t";
-		for( int i=0; i<nblocks; i++){
+		for( hsize_t i=0; i<nblocks; i++){
 			os << "[{";
-			for( int j=0; j<rank; j++) os << *( buffer.get() + i*2*rank+j ) << (j < rank-1 ? "," : "}{");
-			for( int j=rank; j<2*rank; j++) os << *( buffer.get() + i*2*rank+j ) << ( j < 2*rank-1 ? "," : "}");
+			for(hsize_t j=0; j<rank; j++) os << *( buffer.get() + i*2*rank+j ) << (j < rank-1 ? "," : "}{");
+			for(hsize_t j=rank; j<2*rank; j++) os << *( buffer.get() + i*2*rank+j ) << ( j < 2*rank-1 ? "," : "}");
 			os << "] ";
 		}
 	}
@@ -102,7 +106,7 @@ template <class T> inline
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec){
 	os << "[";
 	if(vec.size() < H5CPP_CONSOLE_WIDTH ){
-		int i=0;
+		size_t i=0;
 		for(; i<vec.size()-1; i++ ) os << vec[i] <<",";
 		os << vec[i];
 	}else{

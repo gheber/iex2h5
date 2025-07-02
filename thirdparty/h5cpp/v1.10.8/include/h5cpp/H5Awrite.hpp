@@ -1,7 +1,7 @@
-/*
- * Copyright (c) 2018 vargaconsulting, Toronto,ON Canada
- * Author: Varga, Steven <steven@vargaconsulting.ca>
- */
+/* This file is part of the H5CPP project and is licensed under the MIT License.
+ * 
+ * Copyright © 2018–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+ * Contact: info@vargaconsulting.ca */
 
 #ifndef  H5CPP_AWRITE_HPP
 #define  H5CPP_AWRITE_HPP
@@ -42,7 +42,8 @@ namespace h5 {
 		using element_t = typename impl::decay<T>::type;
 		h5::at_t attr = ( H5Aexists(static_cast<hid_t>(parent), name.c_str() ) > 0 ) ?
 			h5::open(parent, name, h5::default_acpl) : h5::create<element_t>(parent, name, current_dims);
-		h5::awrite(attr, impl::data(ref) );
+		auto const* data = impl::data(ref);
+		h5::awrite(attr, data);
 		return attr;
 	}
 

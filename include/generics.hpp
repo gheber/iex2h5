@@ -40,10 +40,6 @@ namespace generics {
         using has_fill_void_t = decltype(std::declval<T&>().fill(0));        
     }
     
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Concepts
-    // ─────────────────────────────────────────────────────────────────────────────
     template <typename T>
     concept arma_mat_like =
         detail::is_detected_v<T, detail::has_set_size_void_t> &&
@@ -106,13 +102,8 @@ namespace generics {
         typename T::value_type;
         requires std::floating_point<typename T::value_type>;
     };
-
-
-
-    
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Fill
-    // ─────────────────────────────────────────────────────────────────────────────
+}
+namespace generics {
     template <typename T, typename Container>
     void fill(T val, Container& container) {
         if constexpr (fillable<Container> || has_fill_method<Container, T> || iterable_mutable<Container> || arma_mat_like<Container>) {
@@ -132,9 +123,6 @@ namespace generics {
         (fill(val, rest), ...);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Zeros, Ones, NaNs
-    // ─────────────────────────────────────────────────────────────────────────────
     template <typename... Args>
     void zeros(Args&... args) {
         fill(0, args...);
@@ -144,8 +132,6 @@ namespace generics {
     void ones(Args&... args) {
         fill(1, args...);
     }
-
-
 
     template <floating_point_container T>
     void nans(T& container) {
@@ -158,9 +144,6 @@ namespace generics {
         (nans(tail), ...);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Resize
-    // ─────────────────────────────────────────────────────────────────────────────
     template <arma_vector_like T>
     void resize(size_t s, T& container) {
         container.resize(s);
@@ -182,7 +165,7 @@ namespace generics {
         resize(s, head);
         (resize(s, tail), ...);
     }
-    
+
     template <arma_mat_like T>
     void resize(size_t rows, size_t cols, T& mat) {
         mat.set_size(rows, cols);
@@ -194,9 +177,6 @@ namespace generics {
         (resize(rows, cols, tail), ...);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // round/ceil/floor
-    // ─────────────────────────────────────────────────────────────────────────────
     template <int precision, element_wise_mathable T>
     void round(T& container) {
         const double scale = std::pow(10.0, precision);
@@ -234,9 +214,6 @@ namespace generics {
         (floor(tail), ...);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // zeroes2nans
-    // ─────────────────────────────────────────────────────────────────────────────
     template <nan_assignable_iterable T>
     void zeros2nans(T& container) {
         using value_t = typename T::value_type;

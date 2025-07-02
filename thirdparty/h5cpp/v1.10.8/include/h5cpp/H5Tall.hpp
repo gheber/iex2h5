@@ -1,20 +1,22 @@
-/*
- * Copyright (c) 2018 vargaconsulting, Toronto,ON Canada
- * Author: Varga, Steven <steven@vargaconsulting.ca>
- */
+/* This file is part of the H5CPP project and is licensed under the MIT License.
+ * 
+ * Copyright © 2018–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+ * Contact: info@vargaconsulting.ca */
 
 #ifndef H5CPP_TALL_HPP
 #define H5CPP_TALL_HPP
 
-
 namespace h5 {
     template<class T> hid_t register_struct(){ return H5I_UNINIT; }
+	struct reference_t {
+        hdset_reg_ref_t value; //< region or object ref storage
+    };
 }
 
 /* template specialization from hid_t< .. > type which provides syntactic sugar in the form
  * h5::dt_t<int> dt; 
  * */
-namespace h5 { namespace impl { namespace detail {
+namespace h5::impl::detail {
 	template<class T> // parent type, data_type is inherited from, see H5Iall.hpp top section for details 
 	using dt_p = hid_t<T,H5Tclose,true,true,hdf5::any>;
 	/*type id*/
@@ -26,7 +28,16 @@ namespace h5 { namespace impl { namespace detail {
 		hid_t() : parent( H5I_UNINIT){}
 	};
 	template <class T> using dt_t = hid_t<T,H5Tclose,true,true,hdf5::type>;
-}}}
+	//
+	template <> struct hid_t<h5::reference_t, H5Tclose,true,true, hdf5::type> : public dt_p<h5::reference_t> {
+		using parent = dt_p<h5::reference_t>;
+		using dt_p<h5::reference_t>::hid_t;
+		using hidtype = h5::reference_t;
+
+		hid_t() : parent( H5Tcopy(H5T_STD_REF_DSETREG) ) {
+		}
+	};
+}
 
 /* template specialization is for the preceding class, and should be used only for HDF5 ELEMENT types
  * which are in C/C++ the integral types of: char,short,int,long, ... and C POD types. 
@@ -68,6 +79,7 @@ namespace h5 {                                                                  
 	H5CPP_REGISTER_TYPE_(long double,H5T_NATIVE_LDOUBLE)
 
 	H5CPP_REGISTER_TYPE_(char*, H5T_C_S1)
+	H5CPP_REGISTER_TYPE_(const char*, H5T_C_S1)
 
 // half float support: 
 // TODO: factor out in a separate file
@@ -92,6 +104,7 @@ namespace h5 {
 		static constexpr char const * value = "half-float";
 	};
 }
+template<> struct h5::meta::is_contiguous<std::vector<half_float::half>> : std::true_type {};
 #endif
 // Open XDR doesn-t define namespace or 
 #ifdef WITH_OPENEXR_HALF 
@@ -115,6 +128,8 @@ namespace h5 {
 		static constexpr char const * value = "openexr half-float";
 	};
 }
+template<> struct h5::meta::is_contiguous<std::vector<OPENEXR_NAMESPACE::half>> : std::true_type {};
+
 #endif
 #define H5CPP_REGISTER_STRUCT( POD_STRUCT ) H5CPP_REGISTER_TYPE_( POD_STRUCT, h5::register_struct<POD_STRUCT>() )
 
@@ -129,7 +144,7 @@ namespace h5 {
 	template <class T> using dt_t = h5::impl::detail::hid_t<T,H5Tclose,true,true,h5::impl::detail::hdf5::type>;
 
 	template<class T>
-	hid_t copy( const h5::dt_t<T>& dt ){
+	inline hid_t copy( const h5::dt_t<T>& dt ){
 		hid_t id = static_cast<hid_t>(dt);
 		H5Iinc_ref( id );
 		return id;

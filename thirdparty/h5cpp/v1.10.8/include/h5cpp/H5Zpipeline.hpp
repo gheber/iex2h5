@@ -1,8 +1,7 @@
-/*
- * Copyright (c) 2018 vargaconsulting, Toronto,ON Canada
- * Author: Varga, Steven <steven@vargaconsulting.ca>
- *
- */
+/* This file is part of the H5CPP project and is licensed under the MIT License.
+ * 
+ * Copyright © 2018–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+ * Contact: info@vargaconsulting.ca */
 
 #ifndef  H5CPP_PIPELINE_HPP
 #define  H5CPP_PIPELINE_HPP
@@ -12,6 +11,16 @@ namespace h5 {
 }
 
 namespace h5{ namespace impl {
+	using aligned_ptr_t = std::unique_ptr<char, void(*)(void*)>;
+	inline static void free_aligned(void* p) { std::free(p); }
+
+	inline std::unique_ptr<char, void(*)(void*)>
+	make_aligned(size_t alignment, size_t size) {
+		void* p = aligned_alloc(alignment, size);
+		if (!p) throw std::bad_alloc();
+		return { (char*)p, free_aligned };
+	}
+	
 	enum struct filter_direction_t {
 		forward = 0, reverse = 1
 	};
@@ -20,6 +29,36 @@ namespace h5{ namespace impl {
 	struct pipeline_t {
 		pipeline_t(){};
 		~pipeline_t(){};
+		pipeline_t& operator=( pipeline_t&& rhs ) {
+            if (this == &rhs) return *this;
+
+            this->chunk0 = rhs.chunk0; rhs.chunk0 = nullptr;
+            this->chunk1 = rhs.chunk1; rhs.chunk1 = nullptr;
+            this->tail = rhs.tail; rhs.tail = 0;
+            this->rank = rhs.rank; rhs.rank = 0;
+
+            this->ptr0 = std::move(rhs.ptr0);
+            this->ptr1 = std::move(rhs.ptr1);
+            memcpy(filter, rhs.filter,  sizeof(filter));
+
+            memcpy(cd_values, rhs.cd_values,  sizeof(cd_values));
+            memcpy(cd_size, rhs.cd_size,  sizeof(cd_size));
+            memcpy(flags, rhs.flags, sizeof(flags));
+            n = rhs.n; block_size = rhs.block_size; element_size = rhs.element_size;
+            memcpy(C, rhs.C, sizeof(C));
+            memcpy(B, rhs.B, sizeof(B));
+            memcpy(D, rhs.D, sizeof(D));
+            memcpy(N, rhs.N, sizeof(N));
+            memcpy(Rx, rhs.Rx, sizeof(Rx));
+            memcpy(Ry, rhs.Ry, sizeof(Ry));
+
+            this->dcpl = std::move(rhs.dcpl);
+            this->dxpl = std::move(rhs.dxpl);
+            this->ds = std::move(rhs.ds);
+
+            return *this;
+        }
+
 		void set_cache( const h5::dcpl_t& dcpl, size_t element_size );
 		void write(const h5::ds_t& ds, const h5::offset_t& start, const h5::stride_t& stride, const h5::block_t& block, const h5::count_t& count,
 				const h5::dxpl_t& dxpl, const void* ptr);
@@ -43,7 +82,8 @@ namespace h5{ namespace impl {
 		void push( filter::call_t filter );
 		void pop();
 
-		std::unique_ptr<char> ptr0, ptr1; // will call std::free on dtor
+		aligned_ptr_t ptr0{nullptr, free_aligned};
+		aligned_ptr_t ptr1{nullptr, free_aligned};		
 		filter::call_t filter[H5CPP_MAX_FILTER];
 		hsize_t n,
 				C[H5CPP_MAX_RANK], D[H5CPP_MAX_RANK],
@@ -55,6 +95,7 @@ namespace h5{ namespace impl {
 		h5::dxpl_t dxpl;
 		h5::ds_t ds;
 	};
+
 
 	struct basic_pipeline_t : public pipeline_t<basic_pipeline_t>{
 		void write_chunk_impl( const hsize_t* offset, size_t nbytes, const void* ptr );
@@ -114,21 +155,20 @@ inline void h5::impl::pipeline_t<Derived>::set_cache( const h5::dcpl_t& dcpl, si
 			throw std::runtime_error("data-space is rank 0, is data space a scalar? ");
 
 	//fix B block/chunk size for the lifespan of pipeline
-	for(int i=0; i<rank; i++ )
+	for(hsize_t i=0; i<rank; i++ )
 	   	n *= block[i], B[i] = block[rank-i-1];
 
 	block_size = n*element_size;
 	unsigned filter_config;
 	unsigned N = H5Pget_nfilters( dcpl );
-	H5Z_filter_t filter_id;
 	for(unsigned i=0; i<N; i++){
 		cd_size[i] = H5CPP_MAX_FILTER_PARAM;
 		push(
 			filter::get_callback( H5Pget_filter2( dcpl, i, &flags[i], &cd_size[i], cd_values[i], 0, nullptr, &filter_config )));
 	}
+	ptr0 = make_aligned(H5CPP_MEM_ALIGNMENT, block_size);
+	ptr1 = make_aligned(H5CPP_MEM_ALIGNMENT, block_size);
 
-	ptr0 = std::move( std::unique_ptr<char>{ (char*)aligned_alloc( H5CPP_MEM_ALIGNMENT, block_size )} );
-	ptr1 = std::move( std::unique_ptr<char>{ (char*)aligned_alloc( H5CPP_MEM_ALIGNMENT, block_size )} );
 	// get an alias to smart ptr
 	if( (chunk0 = ptr0.get()) == NULL || (chunk1 = ptr1.get()) == NULL )
 	   	throw h5::error::io::dataset::open( H5CPP_ERROR_MSG("CTOR: couldn't allocate memory for caching chunks, invalid/check size?"));
@@ -237,5 +277,12 @@ template< class Derived>
 inline void h5::impl::pipeline_t<Derived>::pop(){
 	tail--;
 }
-
+template<class T>
+inline std::ostream& operator<<(std::ostream &os, const h5::impl::pipeline_t<T>& p) {
+    os << std::dec;
+	os <<"pipeline:\n"
+		 "------------------------------------------\n";
+    os << "n: " << p.n;
+	return os;
+}
 #endif

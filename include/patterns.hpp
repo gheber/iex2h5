@@ -7,13 +7,11 @@
 
 #include <chrono>
 #include <concepts>
+#include <cstdint>
 #include <string>
 #include <functional>
 namespace io {
 
-	// ─────────────────────────────────────────────────────────────────────────────
-	// Concepts
-	// ─────────────────────────────────────────────────────────────────────────────
 	template <typename T>
 	concept has_clock = requires {
 		typename T::clock;
@@ -29,8 +27,6 @@ namespace io {
 		uint64_t size,
 		uint8_t flag) {
 		c.heart_beat(tp);
-		c.begin(tp);
-		c.end(tp);
 		c.day_begin(tp);
 		c.day_end(tp);
 		c.trade_report(tp, stock, price, size, flag);
@@ -44,10 +40,6 @@ namespace io {
 		typename C::clock::duration start, typename C::clock::duration stop) {
 		p.run(consumer, start, stop);
 	};
-
-	// ─────────────────────────────────────────────────────────────────────────────
-	// Producer CRTP
-	// ─────────────────────────────────────────────────────────────────────────────
 	template <typename derived_t, consumer_concept consumer_t>
 	struct producer_t {
 		using type       = derived_t;
@@ -72,10 +64,15 @@ namespace io {
 		void bid(time_point t, uint64_t s, float p, uint64_t z, uint8_t f)          { consumer->bid(t, s, p, z, f); }
 		void trade_break(time_point t, uint64_t s, float p, uint64_t z, uint8_t f)  { consumer->trade_break(t, s, p, z, f); }
 
-		duration start{}, stop{}, heart_beat_interval{};
+		duration start, stop, heart_beat_interval;
 	private:
 		consumer_t* consumer = nullptr;
 		producer_t() = default;
 		friend derived_t;
+	};
+
+	template<typename T>
+	concept stream_t = requires(T stream, uint8_t* ptr, size_t size) {
+		{ stream.pull(ptr, size) } -> std::convertible_to<size_t>;
 	};
 } // namespace io

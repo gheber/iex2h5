@@ -1,11 +1,12 @@
+/* This file is part of the H5CPP project and is licensed under the MIT License.
+ * 
+ * Copyright © 2018–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+ * Contact: info@vargaconsulting.ca */
 
-/*
- * Copyright (c) 2018 vargaconsulting, Toronto,ON Canada
- * Author: Varga, Steven <steven@vargaconsulting.ca>
- *
- */
 #ifndef  H5CPP_ARMA_HPP 
 #define  H5CPP_ARMA_HPP
+
+//#include "H5Tmeta.hpp"
 
 #if defined(ARMA_INCLUDES) || defined(H5CPP_USE_ARMADILLO)
 namespace h5 { 	namespace arma {
@@ -19,6 +20,14 @@ namespace h5 { 	namespace arma {
 		std::integral_constant<bool, std::is_same<Object,h5::arma::cube<T>>::value || std::is_same<Object,h5::arma::colmat<T>>::value
 			|| std::is_same<Object,h5::arma::rowvec<T>>::value ||  std::is_same<Object,h5::arma::colvec<T>>::value>;
 }}
+
+namespace h5::meta {
+    template <class T> struct is_contiguous<h5::arma::rowvec<T>> : std::true_type {};
+    template <class T> struct is_contiguous<h5::arma::colvec<T>> : std::true_type {};
+    template <class T> struct is_contiguous<h5::arma::colmat<T>> : std::true_type {};
+    template <class T> struct is_contiguous<h5::arma::cube<T>> : std::true_type {};
+}
+
 
 namespace h5 { namespace impl {
 	// 1.) object -> H5T_xxx

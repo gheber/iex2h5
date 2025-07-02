@@ -1,8 +1,7 @@
-/*
- * Copyright (c) 2018 vargaconsulting, Toronto,ON Canada
- * Author: Varga, Steven <steven@vargaconsulting.ca>
- *
- */
+/* This file is part of the H5CPP project and is licensed under the MIT License.
+ * 
+ * Copyright © 2018–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+ * Contact: info@vargaconsulting.ca */
 
 #ifndef  H5CPP_MISC_HPP
 #define  H5CPP_MISC_HPP
@@ -16,18 +15,17 @@ namespace h5{
 
 #define H5CPP_supported_elementary_types "supported elementary types ::= pod_struct | float | double |  [signed](int8 | int16 | int32 | int64)"
 
-namespace h5 { namespace utils {
+namespace h5::utils {
 	template <class T>
 	static constexpr bool is_supported = std::is_class<T>::value | std::is_arithmetic<T>::value;
-	//static constexpr bool is_supported = std::is_pod<T>::value && std::is_class<T>::value | std::is_arithmetic<T>::value;
-}}
+}
 
 
 
 
-namespace h5 { namespace utils {
+namespace h5::utils {
 
-	template <typename T> inline  std::vector<T> get_test_data( size_t n ){
+	template <typename T> inline  std::vector<T> get_test_data( size_t n, size_t min, size_t max){
 		std::random_device rd;
 		std::default_random_engine rng(rd());
 		std::uniform_int_distribution<> dist(0,n);
@@ -40,7 +38,7 @@ namespace h5 { namespace utils {
 		return data;
 	}
 // TODO: bang this so total memory alloc is same as 'n'
-	template <> inline std::vector<std::string> get_test_data( size_t n ){
+	template <> inline std::vector<std::string> get_test_data( size_t n, size_t min, size_t max){
 
 		std::vector<std::string> data;
 		data.reserve(n);
@@ -50,7 +48,7 @@ namespace h5 { namespace utils {
 		std::random_device rd;
 		std::default_random_engine rng(rd());
 		std::uniform_int_distribution<> dist(0,sizeof(alphabet)/sizeof(*alphabet)-2);
-		std::uniform_int_distribution<> string_length(5,30);
+		std::uniform_int_distribution<> string_length(min, max);
 
 		std::generate_n(std::back_inserter(data), data.capacity(),   [&] {
 				std::string str;
@@ -63,6 +61,33 @@ namespace h5 { namespace utils {
 				  });
 		return data;
 	}
-}}
+	template <typename T> inline  std::vector<T> get_test_data(size_t n){
+		return get_test_data<T>(n);
+	}
+	template <> inline std::vector<std::string> get_test_data( size_t n){
+
+		std::vector<std::string> data;
+		data.reserve(n);
+
+		static const char alphabet[] = "abcdefghijklmnopqrstuvwxyz"
+										"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+		std::random_device rd;
+		std::default_random_engine rng(rd());
+		std::uniform_int_distribution<> dist(0,sizeof(alphabet)/sizeof(*alphabet)-2);
+		std::uniform_int_distribution<> string_length(7, 17);
+
+		std::generate_n(std::back_inserter(data), data.capacity(),   [&] {
+				std::string str;
+				size_t N = string_length(rng);
+				str.reserve(N);
+				std::generate_n(std::back_inserter(str), N, [&]() {
+								return alphabet[dist(rng)];
+							});
+				  return str;
+				  });
+		return data;
+	}
+
+}
 #endif
 
