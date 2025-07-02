@@ -1,8 +1,7 @@
-/*
- * Copyright (c) 2018 vargaconsulting, Toronto,ON Canada
- * Author: Varga, Steven <steven@vargaconsulting.ca>
- */
-
+/* This file is part of the H5CPP project and is licensed under the MIT License.
+ * 
+ * Copyright © 2018–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+ * Contact: info@vargaconsulting.ca */
 #include <hdf5.h>
 
 #ifdef H5CPP_HAVE_KITA
@@ -25,16 +24,22 @@
 #include <cstring>
 #include <stdlib.h>
 
+#ifdef H5CPP_WITH_GLOG
+   #include <glog/logging.h>
+#endif
+
 #ifndef  H5CPP_CORE_H
 #define H5CPP_CORE_H
 	#include "H5config.hpp"
 	#include "compat.hpp"  /* */
 	#include "H5Eall.hpp"  /* all methods throwing exceptions must be included after */
 	#include "H5misc.hpp"
-	#include "H5Sall.hpp"
 	
 	#include "H5meta.hpp"
+	#include "H5Tmeta.hpp"
 	#include "H5Mstl.hpp"
+	
+	#include "H5Sall.hpp"
 	#include "H5Marma.hpp"
 	#include "H5Mdlib.hpp"
 	#include "H5Meigen.hpp"

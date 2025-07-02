@@ -1,9 +1,8 @@
+/* This file is part of the H5CPP project and is licensed under the MIT License.
+ * 
+ * Copyright © 2018–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+ * Contact: info@vargaconsulting.ca */
 
-/*
- * Copyright (c) 2018 vargaconsulting, Toronto,ON Canada
- * Author: Varga, Steven <steven@vargaconsulting.ca>
- *
- */
 #ifndef  H5CPP_STL_HPP 
 #define  H5CPP_STL_HPP
 
@@ -19,7 +18,7 @@ namespace h5 { namespace impl {
 
 	template <class T> struct decay<const T>{ typedef T type; };
 	template <class T> struct decay<const T*>{ typedef T* type; };
-	template <class T> struct decay<std::basic_string<T>>{ typedef T* type; };
+	template <class T> struct decay<std::basic_string<T>>{ typedef const T* type; };
 	template <class T, signed N> struct decay<const T[N]>{ typedef T* type; };
 	template <class T, signed N> struct decay<T[N]>{ typedef T* type; };
 
@@ -34,7 +33,7 @@ namespace h5 { namespace impl {
 	// helpers
 	template <class T>
 		using is_scalar = std::integral_constant<bool,
-			std::is_integral<T>::value || std::is_pod<T>::value || std::is_same<T,std::string>::value>;
+			std::is_integral<T>::value || h5::compat::is_pod<T>::value || std::is_same<T,std::string>::value>;
 	template <class T, class B = typename impl::decay<T>::type>
 		using is_rank01 = std::integral_constant<bool,
 			std::is_same<T,std::initializer_list<B>>::value || 
@@ -46,7 +45,7 @@ namespace h5 { namespace impl {
 	template<class T> struct rank<std::vector<T>>: public std::integral_constant<size_t,1>{};
 
 	// 3.) read access
-	template <class T> inline typename std::enable_if<std::is_integral<T>::value || std::is_pod<T>::value,
+	template <class T> inline typename std::enable_if<std::is_integral<T>::value || h5::compat::is_pod<T>::value,
 		const T*>::type data( const T& ref ){ return &ref; }
 	template<class T> inline typename std::enable_if< impl::is_scalar<T>::value,
 		const T*>::type data( const std::initializer_list<T>& ref ){ return ref.begin(); }
@@ -61,8 +60,10 @@ namespace h5 { namespace impl {
 	// 4.) write access
 	template <class T> inline typename std::enable_if<std::is_integral<T>::value,
 	T*>::type data( T& ref ){ return &ref; }
+	//template <class T> inline typename std::enable_if<std::is_integral<T>::value,
+	//	const T*>::type data( const T& ref ){ return &ref; }
 	// 5.) obtain dimensions of extents
-	template <class T> inline constexpr typename std::enable_if< impl::is_scalar<T>::value,
+	template <class T> inline constexpr typename std::enable_if< impl::is_scalar<T>::value &&!impl::is_rank01<T>::value,
 		std::array<size_t,0>>::type size( T value ){ return{}; }
 	template <class T> inline typename std::enable_if< impl::is_rank01<T>::value,
 		std::array<size_t,1>>::type size( const T& ref ){ return {ref.size()}; }

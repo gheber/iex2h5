@@ -1,13 +1,10 @@
-/*
- * Copyright (c) 2018 vargaconsulting, Toronto,ON Canada
- * Author: Varga, Steven <steven@vargaconsulting.ca>
- *
- */
+/* This file is part of the H5CPP project and is licensed under the MIT License.
+ * 
+ * Copyright © 2018–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+ * Contact: info@vargaconsulting.ca */
 
 #ifndef  H5CPP_CAPI_HPP
 #define  H5CPP_CAPI_HPP
-
-
 
 /* rules:
  * h5::id_t{ hid_t } or direct initialization  doesn't increment reference count
@@ -154,7 +151,7 @@ namespace h5 {
 	inline void select_hyperslab(const h5::sp_t& sp, const h5::offset_t& offset, const h5::stride_t& stride,
 		   const h5::count_t& count, const h5::block_t& block ){
 		H5CPP_CHECK_NZ(
-				H5Sselect_hyperslab( static_cast<hid_t>(sp), H5S_SELECT_SET, *offset, *stride, *count, *block),
+				H5Sselect_hyperslab( static_cast<hid_t>(sp), H5S_SELECT_SET, *offset, *stride, *block, *count),
 			   std::runtime_error,	h5::error::msg::select_hyperslab);
 	}
 	inline void set_extent(const h5::ds_t& ds, const h5::current_dims_t& dims ){
@@ -193,10 +190,10 @@ namespace h5 {
 			case H5D_COMPACT: break;
 			case H5D_CONTIGUOUS: break;
 			case H5D_CHUNKED:
-				if( H5Pexist(dapl, H5CPP_DAPL_HIGH_THROUGPUT) ){
+				if( H5Pexist(dapl, H5CPP_DAPL_HIGH_THROUGHPUT) ){
 					// grab pointer to uninitialized pipeline
 					h5::impl::pipeline_t<impl::basic_pipeline_t>* ptr;
-					H5Pget(dapl, H5CPP_DAPL_HIGH_THROUGPUT, &ptr);
+					H5Pget(dapl, H5CPP_DAPL_HIGH_THROUGHPUT, &ptr);
 					hid_t type_id = H5Dget_type( static_cast<::hid_t>(ds) );
 					size_t element_size = H5Tget_size( type_id );
 					ptr->set_cache(dcpl, element_size);

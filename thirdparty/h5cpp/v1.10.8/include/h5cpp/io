@@ -1,8 +1,7 @@
-/*
- * Copyright (c) 2018 vargaconsulting, Toronto,ON Canada
- * Author: Varga, Steven <steven@vargaconsulting.ca>
- */
-
+/* This file is part of the H5CPP project and is licensed under the MIT License.
+ * 
+ * Copyright © 2018–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+ * Contact: info@vargaconsulting.ca */
 
 #ifndef  H5CPP_IO_H
 #define H5CPP_IO_H
@@ -12,6 +11,7 @@
 	
 	#include "H5Dcreate.hpp"
 	#include "H5Dopen.hpp"
+	#include "H5Rall.hpp"
 	#include "H5Dwrite.hpp"
 	#include "H5Dread.hpp"
 	#include "H5Dappend.hpp"
@@ -20,6 +20,5 @@
 	#include "H5Aopen.hpp"
 	#include "H5Awrite.hpp"
 	#include "H5Aread.hpp"
-
 #endif	
 

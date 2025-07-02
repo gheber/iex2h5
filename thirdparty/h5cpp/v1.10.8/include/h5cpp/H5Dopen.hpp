@@ -1,8 +1,7 @@
-/*
- * Copyright (c) 2018 vargaconsulting, Toronto,ON Canada
- * Author: Varga, Steven <steven@vargaconsulting.ca>
- *
- */
+/* This file is part of the H5CPP project and is licensed under the MIT License.
+ * 
+ * Copyright © 2018–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+ * Contact: info@vargaconsulting.ca */
 
 #ifndef  H5CPP_DOPEN_HPP 
 #define  H5CPP_DOPEN_HPP
@@ -35,13 +34,15 @@ namespace h5{
 		hid_t dcpl = H5Dget_create_plist( ds );
 
 		switch( H5Pget_layout(dcpl) ){
+			case H5D_LAYOUT_ERROR: break;
+			case H5D_NLAYOUTS: break;  
 			case H5D_COMPACT: break;
 			case H5D_CONTIGUOUS: break;
 			case H5D_CHUNKED:
-				if( H5Pexist(dapl, H5CPP_DAPL_HIGH_THROUGPUT) ){
+				if( H5Pexist(dapl, H5CPP_DAPL_HIGH_THROUGHPUT) ){
 					// grab pointer to uninitialized pipeline
 					h5::impl::pipeline_t<impl::basic_pipeline_t>* ptr;
-					H5Pget(dapl, H5CPP_DAPL_HIGH_THROUGPUT, &ptr);
+					H5Pget(dapl, H5CPP_DAPL_HIGH_THROUGHPUT, &ptr);
 					hid_t type_id = H5Dget_type( static_cast<::hid_t>(ds) );
 					size_t element_size = H5Tget_size( type_id );
 					ptr->set_cache(dcpl, element_size);
