@@ -53,7 +53,7 @@ endif()
 list(APPEND INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/include ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS} )
 list(APPEND LIBS 
   ${HDF5_C_LIBRARIES} ${ZLIB_LIBRARIES} 
-  libargparse libarmadillo libh5cpp libdate_static libfmt_static libhiredis_static librediscpp_static libpcap_static)
+  libargparse libarmadillo libh5cpp libdate_static libfmt_static libhiredis_static librediscpp_static libzng_static)
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
   set(CMAKE_CXX_FLAGS "-fsanitize=address,undefined,bounds,float-divide-by-zero,float-cast-overflow,alignment -Wall -Wextra -Wpedantic -Werror")
