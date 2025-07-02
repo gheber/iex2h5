@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
 		cout << "\033[1m" "example:" "\033[0m" <<endl;
 		cout << "   unpigz -c tops.pcap.gz | " << argv[0] << " --time-interval 10 --command init" << endl;
 		cout << "   for file in repo/*.pcap.gz; do unpigz -c ${file} | iex2h5 --command rts -o ${HOME}/iex.h5; done" << endl;
-		cout << "   iex2h5 --command index" << endl << endl;
+		cout << "This program uses the HDF5 library via dynamic linking. HDF5 is © The HDF Group and licensed under a BSD-style license." << endl;
 
 		cout << "Copyright © <2017-2025> Varga Consulting, Toronto, ON, info@vargaconsulting.ca" << endl << endl;
 		std::exit(0);
@@ -77,6 +77,7 @@ int main(int argc, char **argv) {
 	.nargs(0);
 	
 	program.add_argument("--time-interval").default_value(static_cast<unsigned>(10)).scan<'u', unsigned>().help("temporal interval in seconds, irts stream is converted into");
+		<< "This program uses the HDF5 library via dynamic linking. HDF5 is © The HDF Group and licensed under a BSD-style license.\n"
 	program.add_argument("--start").default_value(std::string("14:30:00")).help("lower bound in UTC, considers events only after");
 	program.add_argument("--stop").default_value(std::string("21:00:00")).help("upper bound in UTC, considers events only before");
 	
