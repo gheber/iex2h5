@@ -4,12 +4,16 @@
  * Contact: info@vargaconsulting.ca */
 
 #pragma once
+
 #include <cstdint>
 #include <net/ethernet.h>
 #include <netinet/ip.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
+
+#include <chrono>
+#include "patterns.hpp"
 
 namespace iex {
     static constexpr uint16_t IEX_DEEPS_v105 = 0x8004; //!< as defined in deeps spec
@@ -362,4 +366,169 @@ namespace iex::protocol {
     }__attribute__((packed));
     static_assert( sizeof(block) == 20, "not aligned to byte!!!");
 }
- 
+
+namespace iex {
+	/**
+	 * @ingroup IEX
+	 * @brief Extracts data from PCAP stream and dispatches parsed messages to a consumer.
+	 * 
+	 * This transport template handles the raw `iex::transport::header` segments, disassembles them into protocol-specific
+	 * messages, and invokes the corresponding consumer methods (`ask`, `bid`, `trade_report`, etc.).
+	 *
+	 * @tparam consumer_t The consumer class type that defines how to process the parsed messages.  */
+	template <typename consumer_t> struct transport_t :
+	public io::producer_t<transport_t<consumer_t>,consumer_t> {
+		using block_t = iex::protocol::block;                      /*!< IEX framing block structure */
+		using time_point = typename consumer_t::clock::time_point; /*!< Timestamp type derived from consumer's clock */
+		using duration = typename consumer_t::clock::duration;     /*!< Duration type derived from consumer's clock */
+	;
+
+		/**
+		 * @brief Handles a single IEX transport segment.
+		 *
+		 * This method:
+		 * - Computes current wall time from segment header.
+		 * - Emits `day_begin` and `day_end` signals as appropriate.
+		 * - Emits synthetic `heart_beat` events on a configured interval.
+		 * - Dispatches DEEPS or TOPS message variants to protocol handlers.
+		 * @param segment Pointer to the transport segment header.    */
+		void transport_handler( const iex::transport::header* segment ){
+			using namespace std;
+			using namespace date;
+		
+			if( !count ) today = date::floor<date::days>( time_point(duration( segment->time) ) );
+			auto now = time_point(duration( segment->time) );
+		
+			// trigger opening market event
+			if( now > today + this->start && !is_market_opened )
+				is_market_opened = true, this->day_begin( now ), last_time = today + this->start - this->heart_beat_interval;
+		
+			char* cursor = (char*)(segment + 1); // the first message
+			if( is_market_opened && !is_market_closed)
+				// a segment may contain multiple messages, we are to iterate through them
+				for( int i=0; i < segment->message_count; i++ ){
+					// make sure to trigger this timer event before processing the current
+					// HFT event, so the current state of client will not contain the event that tripped
+					// timer
+					while( last_time + this->heart_beat_interval <= now ){
+						last_time += this->heart_beat_interval;
+					
+						if( !is_first_beat ) 
+							this->heart_beat( last_time );
+						else is_first_beat = false;
+					}
+					
+					const block_t* block =  (block_t*) cursor;
+					switch( segment[i].protocol_id ) {
+						case IEX_DEEPS_v105: deeps_v105( (iex::deeps::v105::message*) &block->hdr ); break;
+						case IEX_TOPS_v156: tops_v156( (iex::tops::v156::message*)  &block->hdr ); break;
+						case IEX_TOPS_v163: tops_v163( (iex::tops::v163::message*)  &block->hdr ); break;
+						default: ;
+					}
+					cursor += (block->length+sizeof(block_t::length)); // move cursor to next block,
+				}
+			//closing market
+			if( now > today + this->stop && is_market_opened && !is_market_closed )
+				is_market_closed = true, this->day_end( now );
+			count++;
+		}
+		/**
+		 * @brief Emits any remaining heartbeat events and calls `day_end`.
+		 *
+		 * Should be invoked after the transport stream ends, even prematurely. */
+		void end() {
+			if (this->is_market_opened && !this->is_market_closed) {
+				this->is_market_closed = true;
+				auto end_of_day = this->today + this->stop;
+		
+				for (auto ts = this->last_time + this->heart_beat_interval; ts <= end_of_day; ts += this->heart_beat_interval)
+					this->heart_beat(ts);
+		
+				this->day_end(end_of_day);
+			}
+		}
+		
+		// TODO: convert to CRTP
+		virtual void run_impl() = 0;   /*!< CRTP virtual override to implement stream reader (pcap, websocket, etc.) */
+		long count=0;                  /*!< Number of transport segments processed */
+	private:
+		/**
+		 * @brief Parse and dispatch IEX TOPS v156 messages.
+		 * @param msg Pointer to parsed `v156::message` structure. */
+		void tops_v156(const iex::tops::v156::message* msg) {
+			using namespace tops;
+			time_point tp = time_point( duration( msg->hdr.time ));
+			const v156::quote_update* qu = &msg->qu;
+			const v156::trade_report* tr = &msg->tr;
+			const v156::trade_break*  tb = &msg->tb;
+		
+			switch(msg->hdr.type) {
+				case 'Q': // quote update
+					if(qu->ask_size) this->ask(tp, msg->hdr.symbol, 1e-4*qu->ask_price, qu->ask_size, 0);
+					if(qu->bid_size) this->bid(tp, msg->hdr.symbol, 1e-4*qu->bid_price, qu->bid_size, 0);
+					break;
+				case 'T': // trade report
+					this->trade_report(tp, msg->hdr.symbol, 1e-4 * tr->price, tr->size, msg->hdr.flag);
+					break;
+				case 'B': // trade break
+					this->trade_break(tp, msg->hdr.symbol, tb->price, tb->size, msg->hdr.flag);
+					break;
+			}                
+		}
+
+		/**
+		 * @brief Parse and dispatch IEX TOPS v163 messages.
+		 * @param msg Pointer to parsed `v163::message` structure. */
+		void tops_v163(const iex::tops::v163::message  * msg) {
+			constexpr float conv_scalar = 1e-4;
+			using namespace tops;
+		
+			time_point tp = time_point(duration(msg->hdr.time));
+			const v163::quote_update* qu = &msg->qu;
+			const v163::trade_report* tr = &msg->tr;
+			const v163::trade_break*  tb = &msg->tb;
+		
+			switch(msg->hdr.type) {
+				case 'Q': // quote update
+					if( qu->ask_size ) this->ask(tp,  msg->hdr.symbol, conv_scalar * qu->ask_price, qu->ask_size, msg->hdr.flag);
+					if( qu->bid_size ) this->bid(tp,  msg->hdr.symbol, conv_scalar * qu->bid_price, qu->bid_size, msg->hdr.flag);
+					break;
+				case 'T': // trade report
+					this->trade_report(tp, msg->hdr.symbol, conv_scalar * tr->price, tr->size, msg->hdr.flag);
+					break;
+				case 'B': // trade break
+					this->trade_break(tp, msg->hdr.symbol, conv_scalar * tb->price, tb->size, msg->hdr.flag);
+					break;
+			}                
+		}
+
+		/**
+		 * @brief Parse and dispatch IEX DEEPS v105 messages.
+		 * @param msg Pointer to parsed `v105::message` structure. */
+		void deeps_v105(const iex::deeps::v105::message * msg) {
+			using namespace deeps;
+			time_point tp = time_point(duration(msg->hdr.time));
+			const v105::trade_report* tr = &msg->tr;
+			const v105::trade_break*  tb = &msg->tb;
+			// frequent: H,T,P,8   none: D,X,B  rare: O,E,A 
+			switch(msg->hdr.type) {
+				case '8': // bid: price level update buy size or bids
+					this->bid(tp, msg->hdr.symbol, 1e-4 * tr->price, tr->size, msg->hdr.flag);
+					break;
+				case '5': // ask: price level update or sell side or offer 
+					this->ask(tp, msg->hdr.symbol, 1e-4 * tr->price, tr->size, msg->hdr.flag);
+					break;
+				case 'T': // trade report
+					this->trade_report(tp, msg->hdr.symbol, 1e-4 * tr->price, tr->size, msg->hdr.flag);
+					break;
+				case 'B': // trade break
+					this->trade_break(tp, msg->hdr.symbol, tb->price, 0,  msg->hdr.flag);
+					break;
+			}
+			// P -- not shortable, sort of important status info                
+		}
+	
+		bool is_market_opened=false, is_market_closed=false, is_first_beat=true;
+		time_point today, last_time;
+	};
+}
