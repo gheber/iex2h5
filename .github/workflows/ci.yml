@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
+        os: [ubuntu-22.04, ubuntu-24.04 macos-13]
         compiler: [gcc-13, gcc-14, gcc-15, clang-17, clang-18, clang-19, clang-20]
         include:
           - compiler: gcc-13
@@ -42,6 +42,9 @@ jobs:
           "ubuntu-22.04:gcc-15"
           "ubuntu-24.04:gcc-15"
           "ubuntu-24.04:clang-17"
+          "macos-13:gcc-13"
+          "macos-13:gcc-14"
+          "macos-13:gcc-15"          
           )
 
         combo="${{ matrix.os }}:${{ matrix.compiler }}"
@@ -54,8 +57,15 @@ jobs:
         done
           echo "SKIP_COMPILE=false" >> "$GITHUB_ENV"
 
-    - name: Setup compiler
-      if: env.SKIP_COMPILE == 'false'
+    - name: Setup compiler on macOS
+      if: ${{ env.SKIP_COMPILE == 'false' && runner.os == 'macOS' }}
+      run: |
+        brew install llvm@${{ matrix.compiler-version }}
+        echo "CC=$(brew --prefix llvm@${{ matrix.compiler-version }})/bin/clang" >> $GITHUB_ENV
+        echo "CXX=$(brew --prefix llvm@${{ matrix.compiler-version }})/bin/clang++" >> $GITHUB_ENV
+
+    - name: Setup compiler on Linux
+      if: ${{ env.SKIP_COMPILE == 'false' && runner.os == 'Linux' }}
       run: |
         compiler="${{ matrix.compiler }}"
         version="${{ matrix.compiler-version }}"
@@ -84,9 +94,16 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Install system dependencies
-      if: env.SKIP_COMPILE == 'false'
+    - name: Install system dependencies on macOS
+      if: ${{ env.SKIP_COMPILE == 'false' && runner.os == 'macOS' }}
+      run: |
+        brew update
+        brew install hdf5
+
+    - name: Install system dependencies on Linux
+      if: ${{ env.SKIP_COMPILE == 'false' && runner.os == 'Linux' }}
       run: sudo apt-get update && sudo apt-get install -y libhdf5-dev
+
 
     - name: Configure
       if: env.SKIP_COMPILE == 'false'
