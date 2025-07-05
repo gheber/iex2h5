@@ -17,6 +17,42 @@
 #include <utils.hpp>
 #include <iex.hpp>
 #include <zlib-ng.h>
+#include <algorithm>
+
+namespace utils::pcap {
+	enum class link_type : uint16_t {
+		NULL_LINKTYPE = 0, ETHERNET = 1, TOKEN_RING = 6, ARCNET = 7, SLIP = 8, PPP = 9, FDDI = 10, PPPoE = 50, 
+		CISCO_HDLC = 51, ATM_RFC1483 = 100, RAW_IP = 101, IEEE_802_11 = 105, FRAME_RELAY = 113, BLUETOOTH_HCI_H4 = 117,
+		USB_LINUX = 119, IEEE_802_15_4 = 122, BLUETOOTH_HCI_H4_WITH_PHDR = 127, LINUX_SLL = 147, LOCALTALK = 148,
+		BLUETOOTH_MONITOR = 201, IPV4 = 229, IPV6 = 230, IEEE_802_15_4_NOFCS = 239, DVB_CI = 240, MUX27010 = 241,
+		BLUETOOTH_LE_LL = 245, Z_WAVE = 247, IEEE_802_15_9 = 257, BLUETOOTH_MESH = 276, IEEE_1905_1 = 278, DSA_TAG_BRCM = 279,
+		IEEE_802_11_RADIOTAP = 280, OPENVSWITCH_DATAPATH = 283, USBPCAP = 284, RTPS = 286, NFC = 287, RTIC = 288,
+		LORA = 289, SIGFOX = 291, WI_SUN = 292, DASH7 = 293, NRF_802_15_4 = 294, NR_5G_RRC = 295, NB_IOT = 296, GTP_U = 297,
+		E1 = 298, RTP_RTCP = 299, GTPV2_C = 300, PFCP = 301, IEEE_802_1QCP = 302, TSN = 303, TT_ETHERNET = 304, H248 = 305,
+		NBMA = 306, G709 = 307, MPLS = 308, LISP = 309, ETNET = 310, IEX_DEEP_v105 = 320, IEX_TOPS_v156 = 321 };
+
+	inline const std::map<link_type, std::string> link_names = {
+		{link_type::NULL_LINKTYPE,"Null / No link-layer"},{link_type::ETHERNET,"Ethernet (IEEE 802.3)"},
+		{link_type::TOKEN_RING,"Token Ring (IEEE 802.5)"},{link_type::ARCNET,"ARCnet"},{link_type::SLIP,"SLIP"},
+		{link_type::PPP,"PPP"},{link_type::FDDI,"FDDI"},{link_type::PPPoE,"PPP over Ethernet"},{link_type::CISCO_HDLC,"Cisco HDLC"},
+		{link_type::ATM_RFC1483,"ATM Classical IP"},{link_type::RAW_IP,"Raw IP"},{link_type::IEEE_802_11,"IEEE 802.11"},
+		{link_type::FRAME_RELAY,"Frame Relay"},{link_type::BLUETOOTH_HCI_H4,"Bluetooth HCI H4"},{link_type::USB_LINUX,"USB Linux"},
+		{link_type::IEEE_802_15_4,"IEEE 802.15.4"},{link_type::BLUETOOTH_HCI_H4_WITH_PHDR,"Bluetooth HCI H4 (w/ pseudo-header)"},
+		{link_type::LINUX_SLL,"Linux Cooked Capture"},{link_type::LOCALTALK,"LocalTalk"},{link_type::BLUETOOTH_MONITOR,"Bluetooth Linux Monitor"},
+		{link_type::IPV4,"IPv4"},{link_type::IPV6,"IPv6"},{link_type::IEEE_802_15_4_NOFCS,"IEEE 802.15.4 (no FCS)"},
+		{link_type::DVB_CI,"DVB-CI"},{link_type::MUX27010,"MUX27010"},{link_type::BLUETOOTH_LE_LL,"Bluetooth LE LL"},
+		{link_type::Z_WAVE,"Z-Wave"},{link_type::IEEE_802_15_9,"IEEE 802.15.9"},{link_type::BLUETOOTH_MESH,"Bluetooth Mesh"},
+		{link_type::IEEE_1905_1,"IEEE 1905.1"},{link_type::DSA_TAG_BRCM,"Broadcom DSA Tag"},{link_type::IEEE_802_11_RADIOTAP,"802.11 RadioTap"},
+		{link_type::OPENVSWITCH_DATAPATH,"Open vSwitch Datapath"},{link_type::USBPCAP,"USBPcap"},{link_type::RTPS,"RTPS"},
+		{link_type::NFC,"NFC"},{link_type::RTIC,"RTIC"},{link_type::LORA,"LoRa"},{link_type::SIGFOX,"Sigfox"},
+		{link_type::WI_SUN,"Wi-SUN"},{link_type::DASH7,"Dash7"},{link_type::NRF_802_15_4,"NRF 802.15.4"},
+		{link_type::NR_5G_RRC,"5G NR RRC"},{link_type::NB_IOT,"NB-IoT"},{link_type::GTP_U,"GTP-U"},{link_type::E1,"E1"},
+		{link_type::RTP_RTCP,"RTP / RTCP"},{link_type::GTPV2_C,"GTPv2-C"},{link_type::PFCP,"PFCP"},{link_type::IEEE_802_1QCP,"IEEE 802.1Qcp"},
+		{link_type::TSN,"Time-Sensitive Networking"},{link_type::TT_ETHERNET,"TTEthernet"},{link_type::H248,"H.248"},
+		{link_type::NBMA,"NBMA"},{link_type::G709,"ITU-T G.709"},{link_type::MPLS,"MPLS"},{link_type::LISP,"LISP"},
+		{link_type::ETNET,"DetNet"},{link_type::IEX_DEEP_v105,"IEX DEEP v1.05"},{link_type::IEX_TOPS_v156,"IEX TOPS v1.56"}
+	};
+}
 
 namespace io::stream {
 
