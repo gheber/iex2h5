@@ -55,12 +55,37 @@ namespace utils::pcap {
 }
 
 namespace io::stream {
-
 	struct file_t {
 		explicit file_t(FILE* fd) : fd(fd) {}
 
 		[[nodiscard]] size_t pull(uint8_t* dst, size_t max) {
 			return std::fread(dst, 1, max, fd);
+		}
+		[[nodiscard]] size_t peek(uint8_t* dst, size_t len) {
+			if (!fd || !dst || len == 0)
+				return 0;
+
+			fpos_t pos;
+			if (fgetpos(fd, &pos) != 0)
+				return 0;
+
+			size_t n = std::fread(dst, 1, len, fd);
+			fsetpos(fd, &pos);
+			return n;
+		}
+
+		static uint32_t peek(FILE* fd) {
+			fpos_t pos;
+			uint32_t magic = 0;
+			if (!fd) THROW_RUNTIME_ERROR("null FILE* passed to file_t::peek");
+			if (fgetpos(fd, &pos) != 0)
+				THROW_RUNTIME_ERROR("fgetpos failed in file_t::peek");
+			if (std::fread(&magic, sizeof(magic), 1, fd) != 1)
+				THROW_RUNTIME_ERROR("fread failed in file_t::peek");
+			if (fsetpos(fd, &pos) != 0)
+				THROW_RUNTIME_ERROR("fsetpos failed in file_t::peek");
+
+			return magic;
 		}
 
 	private:
@@ -68,7 +93,6 @@ namespace io::stream {
 	};
 	
 	struct gzip_t {
-
 		explicit gzip_t(FILE* fd) : fd(fd) {
 			if (zng_inflateInit2(&strm, 31) != Z_OK)
 				THROW_RUNTIME_ERROR("zng_inflateInit2 failed");
@@ -91,6 +115,27 @@ namespace io::stream {
 				total += n;
 			}
 			return total;
+		}
+		[[nodiscard]] size_t peek(uint8_t* dst, size_t len) {
+			if (decompressed_pos == decompressed_end && !replenish())
+				return 0;
+
+			size_t available = decompressed_end - decompressed_pos;
+			size_t n = std::min(len, available);
+			std::memcpy(dst, decompressed_buffer.data() + decompressed_pos, n);
+			std::rewind(fd);
+			return n;
+		}
+
+		static uint32_t peek(FILE* fd) {
+			if (!fd) THROW_RUNTIME_ERROR("null FILE* in gzip_t::peek");
+
+			stream::gzip_t gz(fd);  // temp gzip stream
+			uint32_t magic = 0;
+			if (gz.peek(reinterpret_cast<uint8_t*>(&magic), sizeof(magic)) != sizeof(magic))
+				THROW_RUNTIME_ERROR("failed to read magic from gzip");
+
+			return magic;
 		}
 
 		bool replenish() {
