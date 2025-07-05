@@ -154,7 +154,12 @@ int main(int argc, char **argv) {
 			// condionally update trading days, given there has been RTS data processed
 			if (H5Lexists(fd, "stats", H5P_DEFAULT) > 0) try {
 				std::vector<std::string> active_days = h5::ls(fd, "stats");
-				h5::write(fd, trading_days_path, active_days);
+				h5::ds_t ds;
+				if (H5Lexists(fd, trading_days_path.data(), H5P_DEFAULT) > 0)
+					ds = h5::open(fd, trading_days_path);
+				else ds = h5::create<std::string>(fd, trading_days_path, h5::current_dims{0}, h5::max_dims{H5S_UNLIMITED}, h5::chunk{512}| h5::gzip{9});
+				h5::set_extent(ds, h5::current_dims{active_days.size()});
+				h5::write(ds, active_days, h5::offset{0}, h5::count{active_days.size()});
 			} catch(const h5::error::any& err) {}
 
 			auto& all_contracts = io::base::consumer_t<consumer>::flat_map;
