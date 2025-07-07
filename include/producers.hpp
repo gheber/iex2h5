@@ -17,14 +17,75 @@
 #include <utils.hpp>
 #include <iex.hpp>
 #include <zlib-ng.h>
+#include <algorithm>
+
+namespace utils::pcap {
+	enum class link_type : uint16_t {
+		NULL_LINKTYPE = 0, ETHERNET = 1, TOKEN_RING = 6, ARCNET = 7, SLIP = 8, PPP = 9, FDDI = 10, PPPoE = 50, 
+		CISCO_HDLC = 51, ATM_RFC1483 = 100, RAW_IP = 101, IEEE_802_11 = 105, FRAME_RELAY = 113, BLUETOOTH_HCI_H4 = 117,
+		USB_LINUX = 119, IEEE_802_15_4 = 122, BLUETOOTH_HCI_H4_WITH_PHDR = 127, LINUX_SLL = 147, LOCALTALK = 148,
+		BLUETOOTH_MONITOR = 201, IPV4 = 229, IPV6 = 230, IEEE_802_15_4_NOFCS = 239, DVB_CI = 240, MUX27010 = 241,
+		BLUETOOTH_LE_LL = 245, Z_WAVE = 247, IEEE_802_15_9 = 257, BLUETOOTH_MESH = 276, IEEE_1905_1 = 278, DSA_TAG_BRCM = 279,
+		IEEE_802_11_RADIOTAP = 280, OPENVSWITCH_DATAPATH = 283, USBPCAP = 284, RTPS = 286, NFC = 287, RTIC = 288,
+		LORA = 289, SIGFOX = 291, WI_SUN = 292, DASH7 = 293, NRF_802_15_4 = 294, NR_5G_RRC = 295, NB_IOT = 296, GTP_U = 297,
+		E1 = 298, RTP_RTCP = 299, GTPV2_C = 300, PFCP = 301, IEEE_802_1QCP = 302, TSN = 303, TT_ETHERNET = 304, H248 = 305,
+		NBMA = 306, G709 = 307, MPLS = 308, LISP = 309, ETNET = 310, IEX_DEEP_v105 = 320, IEX_TOPS_v156 = 321 };
+
+	inline const std::map<link_type, std::string> link_names = {
+		{link_type::NULL_LINKTYPE,"Null / No link-layer"},{link_type::ETHERNET,"Ethernet (IEEE 802.3)"},
+		{link_type::TOKEN_RING,"Token Ring (IEEE 802.5)"},{link_type::ARCNET,"ARCnet"},{link_type::SLIP,"SLIP"},
+		{link_type::PPP,"PPP"},{link_type::FDDI,"FDDI"},{link_type::PPPoE,"PPP over Ethernet"},{link_type::CISCO_HDLC,"Cisco HDLC"},
+		{link_type::ATM_RFC1483,"ATM Classical IP"},{link_type::RAW_IP,"Raw IP"},{link_type::IEEE_802_11,"IEEE 802.11"},
+		{link_type::FRAME_RELAY,"Frame Relay"},{link_type::BLUETOOTH_HCI_H4,"Bluetooth HCI H4"},{link_type::USB_LINUX,"USB Linux"},
+		{link_type::IEEE_802_15_4,"IEEE 802.15.4"},{link_type::BLUETOOTH_HCI_H4_WITH_PHDR,"Bluetooth HCI H4 (w/ pseudo-header)"},
+		{link_type::LINUX_SLL,"Linux Cooked Capture"},{link_type::LOCALTALK,"LocalTalk"},{link_type::BLUETOOTH_MONITOR,"Bluetooth Linux Monitor"},
+		{link_type::IPV4,"IPv4"},{link_type::IPV6,"IPv6"},{link_type::IEEE_802_15_4_NOFCS,"IEEE 802.15.4 (no FCS)"},
+		{link_type::DVB_CI,"DVB-CI"},{link_type::MUX27010,"MUX27010"},{link_type::BLUETOOTH_LE_LL,"Bluetooth LE LL"},
+		{link_type::Z_WAVE,"Z-Wave"},{link_type::IEEE_802_15_9,"IEEE 802.15.9"},{link_type::BLUETOOTH_MESH,"Bluetooth Mesh"},
+		{link_type::IEEE_1905_1,"IEEE 1905.1"},{link_type::DSA_TAG_BRCM,"Broadcom DSA Tag"},{link_type::IEEE_802_11_RADIOTAP,"802.11 RadioTap"},
+		{link_type::OPENVSWITCH_DATAPATH,"Open vSwitch Datapath"},{link_type::USBPCAP,"USBPcap"},{link_type::RTPS,"RTPS"},
+		{link_type::NFC,"NFC"},{link_type::RTIC,"RTIC"},{link_type::LORA,"LoRa"},{link_type::SIGFOX,"Sigfox"},
+		{link_type::WI_SUN,"Wi-SUN"},{link_type::DASH7,"Dash7"},{link_type::NRF_802_15_4,"NRF 802.15.4"},
+		{link_type::NR_5G_RRC,"5G NR RRC"},{link_type::NB_IOT,"NB-IoT"},{link_type::GTP_U,"GTP-U"},{link_type::E1,"E1"},
+		{link_type::RTP_RTCP,"RTP / RTCP"},{link_type::GTPV2_C,"GTPv2-C"},{link_type::PFCP,"PFCP"},{link_type::IEEE_802_1QCP,"IEEE 802.1Qcp"},
+		{link_type::TSN,"Time-Sensitive Networking"},{link_type::TT_ETHERNET,"TTEthernet"},{link_type::H248,"H.248"},
+		{link_type::NBMA,"NBMA"},{link_type::G709,"ITU-T G.709"},{link_type::MPLS,"MPLS"},{link_type::LISP,"LISP"},
+		{link_type::ETNET,"DetNet"},{link_type::IEX_DEEP_v105,"IEX DEEP v1.05"},{link_type::IEX_TOPS_v156,"IEX TOPS v1.56"}
+	};
+}
 
 namespace io::stream {
-
 	struct file_t {
 		explicit file_t(FILE* fd) : fd(fd) {}
 
 		[[nodiscard]] size_t pull(uint8_t* dst, size_t max) {
 			return std::fread(dst, 1, max, fd);
+		}
+		[[nodiscard]] size_t peek(uint8_t* dst, size_t len) {
+			if (!fd || !dst || len == 0)
+				return 0;
+
+			fpos_t pos;
+			if (fgetpos(fd, &pos) != 0)
+				return 0;
+
+			size_t n = std::fread(dst, 1, len, fd);
+			fsetpos(fd, &pos);
+			return n;
+		}
+
+		static uint32_t peek(FILE* fd) {
+			fpos_t pos;
+			uint32_t magic = 0;
+			if (!fd) THROW_RUNTIME_ERROR("null FILE* passed to file_t::peek");
+			if (fgetpos(fd, &pos) != 0)
+				THROW_RUNTIME_ERROR("fgetpos failed in file_t::peek");
+			if (std::fread(&magic, sizeof(magic), 1, fd) != 1)
+				THROW_RUNTIME_ERROR("fread failed in file_t::peek");
+			if (fsetpos(fd, &pos) != 0)
+				THROW_RUNTIME_ERROR("fsetpos failed in file_t::peek");
+
+			return magic;
 		}
 
 	private:
@@ -32,7 +93,6 @@ namespace io::stream {
 	};
 	
 	struct gzip_t {
-
 		explicit gzip_t(FILE* fd) : fd(fd) {
 			if (zng_inflateInit2(&strm, 31) != Z_OK)
 				THROW_RUNTIME_ERROR("zng_inflateInit2 failed");
@@ -55,6 +115,27 @@ namespace io::stream {
 				total += n;
 			}
 			return total;
+		}
+		[[nodiscard]] size_t peek(uint8_t* dst, size_t len) {
+			if (decompressed_pos == decompressed_end && !replenish())
+				return 0;
+
+			size_t available = decompressed_end - decompressed_pos;
+			size_t n = std::min(len, available);
+			std::memcpy(dst, decompressed_buffer.data() + decompressed_pos, n);
+			std::rewind(fd);
+			return n;
+		}
+
+		static uint32_t peek(FILE* fd) {
+			if (!fd) THROW_RUNTIME_ERROR("null FILE* in gzip_t::peek");
+
+			stream::gzip_t gz(fd);  // temp gzip stream
+			uint32_t magic = 0;
+			if (gz.peek(reinterpret_cast<uint8_t*>(&magic), sizeof(magic)) != sizeof(magic))
+				THROW_RUNTIME_ERROR("failed to read magic from gzip");
+
+			return magic;
 		}
 
 		bool replenish() {
@@ -94,13 +175,52 @@ namespace io::stream {
 	};
 }
 
-namespace iex::pcap {
+namespace iex::base {
 	struct packet {
 		uint8_t ethernet_frame[14];  /*!< Ethernet header: destination MAC, source MAC, EtherType */
 		uint8_t ipv4[20];            /*!< IPv4 header (not parsed) */
 		uint8_t udp[8];              /*!< UDP header (not parsed) */
 	} __attribute__((packed));
 
+
+	template <class stream, class consumer>
+	struct producer_t : public stream, public transport_t<consumer> {
+		using type = producer_t<stream, consumer>;
+		using duration = typename consumer::duration;
+	
+	explicit producer_t(FILE* fd, duration heart_beat)
+	: stream(fd) {
+		this->heart_beat_interval = heart_beat;
+	}
+
+	protected:
+		bool read_exact(uint8_t* dst, size_t len) {
+			size_t total = 0;
+			while (total < len) {
+				size_t n = static_cast<stream*>(this)->pull(dst + total, len - total);
+				if (n == 0) return false;
+				total += n;
+			}
+			return true;
+		}
+
+		void check_compatibility(std::string protocol){
+			INFO << protocol << " v" << version_major << "." << version_minor << " snaplen " << snap_length
+				<< " linktype " << static_cast<uint16_t>(link_type) << " " << utils::pcap::link_names.at(link_type) 
+				<< (is_little_endian ? " little-endian" : " big-endian") << std::endl;
+			if(!is_little_endian)	THROW_RUNTIME_ERROR("only little endian is supported");
+			if(link_type != utils::pcap::link_type::ETHERNET) THROW_RUNTIME_ERROR("this link type is not supported...");
+		}
+
+		bool needs_byte_swap = false;        /*!< true if host byte order differs from file byte order */
+		bool is_little_endian = false;
+		uint32_t version_minor = 0, version_major = 0, snap_length = 0, packet_count = 0;
+		std::array<uint8_t, 16384> buffer;   /*!< scratch buffer for captured packet payload */
+		utils::pcap::link_type link_type = utils::pcap::link_type::NULL_LINKTYPE;
+	};
+}
+
+namespace iex::pcap {
 	struct global_header_t {
 		uint32_t magic_number;     /*!< Magic number used to detect byte order and timestamp resolution */
 		uint16_t version_major;    /*!< Major version number (typically 2) */
@@ -118,17 +238,14 @@ namespace iex::pcap {
 		uint32_t original;  /**< Original length of the packet on the wire */
 	} __attribute__((packed));
 
-
 	template <class stream, class consumer>
-	struct producer_t : public stream, public transport_t<consumer> {
-		using type = producer_t<stream, consumer>;
+	struct producer_t : public base::producer_t<stream, consumer> {
+		using parent = base::producer_t<stream, consumer>;
 		using duration = typename consumer::duration;
-		using callback_t = std::function<size_t(uint8_t*, size_t)>;
+		using parent::needs_byte_swap, parent::read_exact, parent::buffer, parent::is_little_endian, parent::packet_count,
+			parent::link_type, parent::version_major, parent::version_minor, parent::snap_length, parent::check_compatibility;
 
-		explicit producer_t(FILE* fd, duration heart_beat)
-		: stream(fd) {
-			this->heart_beat_interval = heart_beat;
-
+		explicit producer_t(FILE* fd, duration hb) : parent(fd, hb) {
 			read_exact(reinterpret_cast<uint8_t*>(&global_header), sizeof(global_header));
 			if (!utils::pcap::is_valid_magic(global_header.magic_number))
 				THROW_RUNTIME_ERROR("Invalid PCAP magic number: " + std::to_string(global_header.magic_number));
@@ -143,17 +260,10 @@ namespace iex::pcap {
 				global_header.network       = std::byteswap(global_header.network);
 			}
 
-			if (global_header.network != 1)
-				THROW_RUNTIME_ERROR("unsupported PCAP network type (expected Ethernet)");
-
-			const char* ts_precision = (global_header.magic_number == 0x4d3cb2a1 || global_header.magic_number == 0xa1b23c4d)
-				? "nanosecond" : "microsecond";
-
-			INFO << "pcap v" << global_header.version_major << "." << global_header.version_minor
-				<< " snaplen " << global_header.snaplen
-				<< " linktype " << global_header.network << " (Ethernet) "
-				<< (utils::pcap::is_little_endian(global_header.magic_number) ? "little-endian" : "big-endian")
-				<< " " << ts_precision << " resolution" << std::endl;
+			link_type = static_cast<utils::pcap::link_type>(global_header.network);
+			version_major = global_header.version_major, version_minor = global_header.version_minor, 
+			snap_length = global_header.snaplen, is_little_endian = utils::pcap::is_little_endian(global_header.magic_number);
+			check_compatibility("pcap");
 		}
 
 		void run_impl() {
@@ -167,27 +277,101 @@ namespace iex::pcap {
 					break;  // EOF
 
 				const iex::transport::header* segment = reinterpret_cast<const iex::transport::header*>(
-					buffer.data() + sizeof(packet));
+					buffer.data() + sizeof(iex::base::packet));
 				this->transport_handler(segment);
+				packet_count++;
 			}
 			this->end();
 		}
 
-	private:
-
-		bool read_exact(uint8_t* dst, size_t len) {
-			size_t total = 0;
-			while (total < len) {
-				size_t n = static_cast<stream*>(this)->pull(dst + total, len - total);
-				if (n == 0) return false;
-				total += n;
-			}
-			return true;
-		}
-
-		bool needs_byte_swap = false;        /*!< true if host byte order differs from file byte order */
 		global_header_t global_header{};     /*!< parsed PCAP global header */
 		packet_header_t packet_header{};     /*!< current PCAP packet header */
-		std::array<uint8_t, 16384> buffer;   /*!< scratch buffer for captured packet payload */
 	};
 }  // namespace iex::pcap
+
+namespace iex::pcapng {
+	enum class block_type : uint32_t {
+		SECTION_HEADER        = 0x0A0D0D0A, //!< Section Header Block (SHB)
+		INTERFACE_DESCRIPTION = 0x00000001, //!< Interface Description Block (IDB)
+		PACKET                = 0x00000002, //!< Obsolete: Simple Packet Block (SPB)
+		NAME_RESOLUTION       = 0x00000004, //!< Name Resolution Block (NRB)
+		INTERFACE_STATS       = 0x00000005, //!< Interface Statistics Block (ISB)
+		ENHANCED_PACKET       = 0x00000006, //!< Enhanced Packet Block (EPB)
+		UNKNOWN               = 0xFFFFFFFF  //!< Fallback or invalid block type
+	};
+	struct block_header_t {
+		uint32_t block_type;
+		uint32_t block_total_length;
+	} __attribute__((packed));
+
+	struct shb_t {
+		uint32_t byte_order_magic;
+		uint16_t version_major;
+		uint16_t version_minor;
+		int64_t  section_length;
+	} __attribute__((packed));
+
+	struct idb_t {
+		uint16_t link_type;
+		uint16_t reserved;
+		uint32_t snaplen;
+	} __attribute__((packed));
+
+	struct epb_t {
+		uint32_t interface_id;
+		uint32_t ts_high;
+		uint32_t ts_low;
+		uint32_t captured_len;
+		uint32_t original_len;
+	} __attribute__((packed));
+
+	template <class stream, class consumer>
+	struct producer_t : public base::producer_t<stream, consumer> {
+		using parent = base::producer_t<stream, consumer>;
+		using duration = typename consumer::duration;
+		using parent::needs_byte_swap, parent::read_exact, parent::buffer, parent::is_little_endian, parent::packet_count,
+			parent::link_type, parent::version_major, parent::version_minor, parent::snap_length, parent::check_compatibility;
+
+		explicit producer_t(FILE* fd, duration hb) : parent(fd, hb) {
+		}
+
+		void run_impl() {
+			while (true) {
+				if (!this->read_exact(reinterpret_cast<uint8_t*>(&hdr), sizeof(hdr))) break;
+				if (!this->read_exact(buffer.data(), hdr.block_total_length - sizeof(hdr)))
+					THROW_RUNTIME_ERROR("Failed to read complete block body");
+
+				switch(static_cast<block_type>(hdr.block_type)) {
+					case block_type::SECTION_HEADER:  // already verifies `magic`
+						shb = reinterpret_cast<shb_t*>(buffer.data());
+						needs_byte_swap = utils::pcapng::needs_byteswap(shb->byte_order_magic);
+						version_major = shb->version_major, version_minor = shb->version_minor;
+						is_little_endian = utils::pcapng::is_little_endian(shb->byte_order_magic);
+					break;
+					case block_type::INTERFACE_DESCRIPTION:
+						idb = reinterpret_cast<idb_t*>(buffer.data()), snap_length = idb->snaplen,
+						link_type = static_cast<utils::pcap::link_type>(idb->link_type);
+						check_compatibility("pcap-ng");
+					break;
+					case block_type::ENHANCED_PACKET: {
+						const epb_t* epb = reinterpret_cast<const epb_t*>(buffer.data());
+						if(epb->captured_len != epb->original_len)
+							TRACE << epb->captured_len << " " << epb->original_len << std::endl;
+						const iex::transport::header* segment = reinterpret_cast<const iex::transport::header*>(
+							buffer.data() + sizeof(epb_t) + sizeof(iex::base::packet));
+						this->transport_handler(segment);
+						break;
+					}
+					default: ;
+				}
+			}
+			this->end();
+		}
+
+		uint32_t trailing_length = 0, trailer = 0;
+		block_header_t hdr;
+		shb_t* shb;
+		idb_t* idb;
+	};
+} // namespace iex::pcapng
+
