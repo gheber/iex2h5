@@ -470,9 +470,6 @@ namespace iex {
 				case 'T': // trade report
 					this->trade_report(tp, msg->hdr.symbol, 1e-4 * tr->price, tr->size, msg->hdr.flag);
 					break;
-				case 'B': // trade break
-					this->trade_break(tp, msg->hdr.symbol, tb->price, tb->size, msg->hdr.flag);
-					break;
 			}                
 		}
 
@@ -496,9 +493,6 @@ namespace iex {
 				case 'T': // trade report
 					this->trade_report(tp, msg->hdr.symbol, conv_scalar * tr->price, tr->size, msg->hdr.flag);
 					break;
-				case 'B': // trade break
-					this->trade_break(tp, msg->hdr.symbol, conv_scalar * tb->price, tb->size, msg->hdr.flag);
-					break;
 			}                
 		}
 
@@ -520,9 +514,6 @@ namespace iex {
 					break;
 				case 'T': // trade report
 					this->trade_report(tp, msg->hdr.symbol, 1e-4 * tr->price, tr->size, msg->hdr.flag);
-					break;
-				case 'B': // trade break
-					this->trade_break(tp, msg->hdr.symbol, tb->price, 0,  msg->hdr.flag);
 					break;
 			}
 			// P -- not shortable, sort of important status info                
