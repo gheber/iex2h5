@@ -28,7 +28,7 @@
 #include <filters.hpp>
 #include <compat.hpp>
 #include <utils.hpp>
-#include <base76.hpp>
+#include <base64.hpp>
 #include <iex.hpp>
 
 namespace {
@@ -98,18 +98,18 @@ namespace io::base {
         }
         
         contract_t find_or_insert(uint64_t iex_symbol) {
-            uint64_t base76_encoded_symbol;
+            uint64_t base64_encoded_symbol;
             try {
-                base76_encoded_symbol = utils::base76::encode(iex_symbol, 0);
+                base64_encoded_symbol = utils::base64::encode(iex_symbol, 0);
             } catch (const std::runtime_error& err){
                 ERROR << err.what() << " |" <<  utils::iex_symbol(iex_symbol) <<"|" << std::endl;
             }
             //std::unique_lock lock(contract_id_mtx);
-            if( auto it = std::ranges::lower_bound(flat_map, base76_encoded_symbol); it != flat_map.end()) {
-                if((base76_encoded_symbol & SYMBOL_MASK) == (*it & SYMBOL_MASK))
+            if( auto it = std::ranges::lower_bound(flat_map, base64_encoded_symbol); it != flat_map.end()) {
+                if((base64_encoded_symbol & SYMBOL_MASK) == (*it & SYMBOL_MASK))
                     return *it & CONTRACT_ID_MASK;
-                else flat_map.insert(it, base76_encoded_symbol | flat_map.size());
-            } else flat_map.emplace_back(base76_encoded_symbol | flat_map.size());
+                else flat_map.insert(it, base64_encoded_symbol | flat_map.size());
+            } else flat_map.emplace_back(base64_encoded_symbol | flat_map.size());
             resize(T, flat_map.size());
             return flat_map.size() - 1;
         }
@@ -134,7 +134,7 @@ namespace io::base {
 
             flat_map.reserve(flat_map.size() + instruments.size());
             for (const std::string& symbol : instruments)
-                flat_map.emplace_back( utils::base76::encode(symbol, flat_map.size()));
+                flat_map.emplace_back( utils::base64::encode(symbol, flat_map.size()));
             std::ranges::sort(flat_map);
         }
     
@@ -147,9 +147,9 @@ namespace io::base {
         static inline std::vector<uint64_t> flat_map;
         static inline std::shared_mutex contract_id_mtx;
         static inline std::shared_mutex container_mtx;
-        static constexpr contract_t MAX_CONTRACT_ID = (1 << 14) - 1;
-        static constexpr uint64_t SYMBOL_MASK = ~uint64_t{0x3FFF}; // upper 50 bits
-        static constexpr uint64_t CONTRACT_ID_MASK = 0x3FFF;       // lower 14 bits
+        static constexpr contract_t MAX_CONTRACT_ID     = (1 << 16) - 1;
+        static constexpr uint64_t SYMBOL_MASK           = ~uint64_t{0xFFFF};  // upper 48 bits
+        static constexpr uint64_t CONTRACT_ID_MASK      = 0xFFFF;             // lower 16 bits
     };
 } // namespace io::base
 
