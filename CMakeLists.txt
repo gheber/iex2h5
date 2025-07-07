@@ -84,7 +84,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
 
   add_test_case(example)
   add_test_case(utils)
-  add_test_case(base76)
+  add_test_case(base64)
   add_test_case(filters)
   add_test_case(error)
   add_test_case(generics)

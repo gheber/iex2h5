@@ -18,6 +18,7 @@
 #include <patterns.hpp>
 #include <producers.hpp>
 #include <consumers.hpp>
+#include <base64.hpp>
 #include <threadpool.hpp>
 #include <io.hpp>
 
@@ -166,7 +167,7 @@ int main(int argc, char **argv) {
 			std::vector<std::string> asset_names(all_contracts.size());
 			TRACE << "instruments: " << all_contracts.size() << std::endl;
 			for(uint64_t contract: all_contracts) {
-				auto[symbol, index] = utils::base76::decode(contract);
+				auto[symbol, index] = utils::base64::decode(contract);
 				if(index >= asset_names.size())
 					throw std::runtime_error("Decoded index out of bounds.");
 				asset_names[index] = utils::trim(symbol);
