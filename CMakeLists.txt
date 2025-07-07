@@ -52,8 +52,8 @@ endif()
 list(APPEND INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/include ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS} )
 list(APPEND LIBS 
   ${HDF5_C_LIBRARIES} ${ZLIB_LIBRARIES} 
-  libargparse libarmadillo libh5cpp libthreadpool
-  libdate_static libfmt_static libhiredis_static librediscpp_static libzng_static
+  libargparse libarmadillo libh5cpp libthreadpool libdate
+  libfmt_static libhiredis_static librediscpp_static libzng_static
   )
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug")

@@ -5,15 +5,9 @@
 
 set(name date)
 
-set(libname lib${name}_static)
+set(libname lib${name})
 project(${libname} LANGUAGES CXX)
 
 set(current_version_dir "v3.0.1")
-file(GLOB_RECURSE all_source_files "${current_version_dir}/src/*.cpp")
-file(GLOB_RECURSE all_header_files "${current_version_dir}/include/*.h")
-
-add_library(${libname} STATIC ${all_source_files} ${all_header_files})
-set_target_properties(${libname} PROPERTIES OUTPUT_NAME ${name})
-target_include_directories(${libname} PUBLIC 
-    ${CMAKE_CURRENT_SOURCE_DIR}/${current_version_dir}/include)
-
+add_library(${libname} INTERFACE)
+target_include_directories(${libname} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/${current_version_dir}/include)

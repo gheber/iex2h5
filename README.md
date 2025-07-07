@@ -15,6 +15,7 @@ A high-performance C++ utility for converting [IEX Transport Protocol (IEX-TP)][
 |---------------|-------------|-------------|-------------|---------------|---------------|---------------|---------------|
 | Ubuntu 22.04  |![gcc13][200]|![gcc14][201]|![gcc15][202]|![clang17][250]|![clang18][251]|![clang19][252]|![clang20][253]|
 | Ubuntu 24.04  |![gcc13][300]|![gcc14][301]|![gcc15][302]|![clang17][350]|![clang18][351]|![clang19][352]|![clang20][353]|
+| Mac OS 13     |![gcc13][400]|![gcc14][401]|![gcc15][402]|![clang17][450]|![clang18][451]|![clang19][452]|![clang20][453]|
 
 ## 📦 Installation
 ```bash
@@ -84,3 +85,10 @@ Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
 [351]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-24.04-clang-18.svg
 [352]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-24.04-clang-19.svg
 [353]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-24.04-clang-20.svg
+[400]: https://vargaconsulting.github.io/iex2h5/badges/macos-13-gcc-13.svg
+[401]: https://vargaconsulting.github.io/iex2h5/badges/macos-13-gcc-14.svg
+[402]: https://vargaconsulting.github.io/iex2h5/badges/macos-13-gcc-15.svg
+[450]: https://vargaconsulting.github.io/iex2h5/badges/macos-13-clang-17.svg
+[451]: https://vargaconsulting.github.io/iex2h5/badges/macos-13-clang-18.svg
+[452]: https://vargaconsulting.github.io/iex2h5/badges/macos-13-clang-19.svg
+[453]: https://vargaconsulting.github.io/iex2h5/badges/macos-13-clang-20.svg
