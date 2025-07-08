@@ -15,6 +15,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
+option(USE_GOOGLE_PROFILER "Enable Google CPU profiler if found" OFF)
+
 # automated versioning
 execute_process( COMMAND git rev-parse --short HEAD WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE GIT_COMMIT_HASH OUTPUT_STRIP_TRAILING_WHITESPACE )
 execute_process( COMMAND git describe --tags --abbrev=0 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE GIT_TAG OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -42,8 +44,13 @@ add_definitions(
 ## end library dependencies
 
 include(FindHDF5)
+include(FindPackageHandleStandardArgs)
+
 find_package(Threads REQUIRED)
 find_package(ZLIB REQUIRED QUIET)
+find_path(GOOGLE_PROFILER_INCLUDE_DIR NAMES google/profiler.h)
+find_library(GOOGLE_PROFILER_LIBRARY NAMES profiler)
+find_package_handle_standard_args(GoogleProfiler DEFAULT_MSG GOOGLE_PROFILER_INCLUDE_DIR GOOGLE_PROFILER_LIBRARY)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 11.4.0)
     add_compile_options(-w)
@@ -55,6 +62,12 @@ list(APPEND LIBS
   libargparse libarmadillo libh5cpp libthreadpool libdate
   libfmt_static libhiredis_static librediscpp_static libzng_static
   )
+
+if(USE_GOOGLE_PROFILER AND GoogleProfiler_FOUND)
+  message(STATUS "Google Profiler enabled")
+  list(APPEND LIBS ${GOOGLE_PROFILER_LIBRARY})
+  add_definitions(-DHAVE_GOOGLE_PROFILER)
+endif()
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
   set(IEX_PCAP_FILE "${CMAKE_SOURCE_DIR}/data/iex-packets.pcap")
