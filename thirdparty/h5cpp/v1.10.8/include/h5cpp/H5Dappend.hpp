@@ -229,8 +229,7 @@ void h5::pt_t::flush(){
 	hsize_t r=1; for(hsize_t i=1; i<rank; i++) r*=chunk_dims[i];
 	*current_dims += (n % r) ? n / r + 1 : n / r;
 	h5::set_extent(ds, current_dims);
-
-	if( H5Tis_variable_str(this->dt)) {
+	if( H5Tis_variable_str(this->dt) > 0 ) {
 		hsize_t block = 1, count = n;
 	 	h5::sp_t mem_space{H5Screate_simple(rank, &count, nullptr )};
 		h5::sp_t file_space{H5Dget_space( static_cast<::hid_t>(ds) )};
