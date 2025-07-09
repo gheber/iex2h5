@@ -29,6 +29,17 @@ namespace h5 { namespace impl {
 			rhs.copy( handle );
 			return *this;
 		 }
+		// allow dasiy chaining already defined properties
+		template<typename R>
+		typename std::enable_if<std::is_same<R, phid_t>::value, phid_t>::type
+		operator|(const R& rhs) const {
+			if (static_cast<::hid_t>(rhs) == H5P_DEFAULT)
+        		return static_cast<phid_t>(*this);
+			::hid_t merged = H5Pcopy(static_cast<::hid_t>(rhs));
+			this->copy(merged);
+			return phid_t{merged};
+		}
+
 		// convert to propery
 		void copy(::hid_t handle_) const { /*CRTP idiom*/
 			static_cast<const Derived*>(this)->copy_impl( handle_ );
