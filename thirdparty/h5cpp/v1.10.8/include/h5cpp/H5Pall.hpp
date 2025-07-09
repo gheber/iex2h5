@@ -28,7 +28,7 @@ namespace h5 { namespace impl {
 		operator|( const R& rhs ) const {
 			rhs.copy( handle );
 			return *this;
-		 }
+		}
 		// allow dasiy chaining already defined properties
 		template<typename R>
 		typename std::enable_if<std::is_same<R, phid_t>::value, phid_t>::type

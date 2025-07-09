@@ -104,7 +104,6 @@ h5::pt_t::~pt_t(){
 		return;
 	this->flush();
 	free(this->fill_value);
-	std::cout << "========= closed packet table ========" << std::endl;
 }
 
 inline
@@ -262,8 +261,6 @@ namespace h5 {
 
 	inline void flush(h5::pt_t& pt) try {
 		pt.flush();
-        //TODO: find better mechanism for deprecating code: #pragma message("not implemented: do not call pt_t::flush() ...")
-		// for now
 	} catch ( const std::runtime_error& e){
 		throw h5::error::io::dataset::close( e.what() );
 	}
