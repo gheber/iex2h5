@@ -55,6 +55,8 @@ namespace h5 {
 		template<class T>
 		friend void append( h5::pt_t& ds, const T& ref);
 		friend void flush(h5::pt_t&);
+		void reset();
+		
 		private:
 		void init(const h5::ds_t& ds_);
 		void flush();
@@ -246,6 +248,10 @@ void h5::pt_t::flush(){
 	}
 }
 
+inline void  h5::pt_t::reset() {
+	std::memset(current_dims, 0, H5CPP_MAX_RANK * sizeof(hsize_t));
+}
+
 namespace h5 {
 	/** @ingroup io-append
 	 * @brief extends HDF5 dataset along the first/slowest growing dimension, then writes passed object to the newly created space
@@ -264,6 +270,11 @@ namespace h5 {
 	} catch ( const std::runtime_error& e){
 		throw h5::error::io::dataset::close( e.what() );
 	}
+	inline void reset(h5::pt_t& pt) try {
+		pt.reset();
+	} catch ( const std::runtime_error& e){
+		throw h5::error::io::dataset::write( e.what() );
+	}	
 }
 
 inline std::ostream& operator<<(std::ostream &os, const h5::pt_t& pt) {
