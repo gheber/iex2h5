@@ -35,7 +35,7 @@ add_definitions(
   -DHOST_NAME_MAX=254
   -DVALUE_PRECISION=6
   -DSTAT_PRECISION=4
-  -DIEX_MAX_SYMBOLS=20000)
+  -DIEX_MAX_SYMBOLS=65536 )
 
 ## begin thirdparty library dependencies
   add_subdirectory(thirdparty)
