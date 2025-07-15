@@ -4,6 +4,7 @@
  * Contact: info@vargaconsulting.ca */
 
 #pragma once
+#define ARMA_NO_DEBUG
 #include <armadillo>
 #include <h5cpp/core>
     #include "tick.hpp"

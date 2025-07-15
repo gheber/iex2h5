@@ -4,7 +4,7 @@
  * Contact: info@vargaconsulting.ca */
 
 #pragma once
-
+#define ARMA_NO_DEBUG
 #include <armadillo>
 #include <concepts>
 #include <cstdint>
