@@ -13,4 +13,4 @@ add_subdirectory(hiredis)
 add_subdirectory(rediscpp)
 add_subdirectory(threadpool)
 add_subdirectory(zlibng)
-
+add_subdirectory(hdf5)

@@ -35,13 +35,15 @@ add_definitions(
   -DHOST_NAME_MAX=254
   -DVALUE_PRECISION=6
   -DSTAT_PRECISION=4
-  -DIEX_MAX_SYMBOLS=20000)
+  -DIEX_MAX_SYMBOLS=20000
+  )
 
 ## begin thirdparty library dependencies
-  add_subdirectory(thirdparty)
+  add_subdirectory(thirdparty EXCLUDE_FROM_ALL)
 ## end library dependencies
 
-include(FindHDF5)
+include(FindPackageHandleStandardArgs)
+
 find_package(Threads REQUIRED)
 find_package(ZLIB REQUIRED QUIET)
 
@@ -53,7 +55,7 @@ list(APPEND INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/include ${HDF5_INCLUDE_DIRS} ${ZLIB
 list(APPEND LIBS 
   ${HDF5_C_LIBRARIES} ${ZLIB_LIBRARIES} 
   libargparse libarmadillo libh5cpp libthreadpool libdate
-  libfmt_static libhiredis_static librediscpp_static libzng_static
+  libfmt_static libhiredis_static librediscpp_static libzng_static libhdf5_static
   )
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
