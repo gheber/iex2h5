@@ -217,8 +217,8 @@ using mdc_config               = impl::fapl_call< impl::fapl_args<hid_t,H5AC_cac
 using mdc_image_config         = impl::fapl_call< impl::fapl_args<hid_t,H5AC_cache_image_config_t*>,H5Pset_mdc_image_config>;
 using mdc_log_options          = impl::fapl_call< impl::fapl_args<hid_t,hbool_t,const char*,hbool_t>,H5Pset_mdc_log_options>;
 #endif
-#if !defined(__APPLE__) && (defined(H5_HAVE_DIRECT) || (H5_VERS_MAJOR > 1 || (H5_VERS_MAJOR == 1 && H5_VERS_MINOR >= 14)))
-	using fapl_direct              = impl::fapl_call<impl::fapl_args<hid_t,size_t,size_t,size_t, H5Pset_fapl_direct>;
+#if !defined(__APPLE__) && (defined(H5_HAVE_DIRECT) )
+	using fapl_direct          = impl::fapl_call<impl::fapl_args<hid_t,size_t,size_t,size_t, H5Pset_fapl_direct>;
 #endif
 //
 namespace flag {
