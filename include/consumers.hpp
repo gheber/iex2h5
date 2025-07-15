@@ -187,10 +187,10 @@ namespace io::rts {
             ERROR << err.what() << std::endl;
         }
         void append(time_point now, contract_t contract, float price, uint64_t size, bool is_bid, bool is_trade, bool is_ask) {
+            uint16_t flags = 
+                (is_bid ? 1 << 0 : 0) | (is_trade ? 1 << 1 : 0) | (is_ask ? 1 << 2 : 0);
             h5::append(irts, iex::tick_t {
-                .time = to_ns(now),
-                .size = size, .price = price, .contract_id = contract,
-                .is_trade = is_trade, .is_bid = is_bid, .is_ask = is_ask, .remove_level = false, .reserved = 0x0});
+                .time = to_ns(now), .price = price, .size = size, .contract_id = contract, .flags = flags });
         }
 
         void on_trade_report(time_point time, contract_t id, float price, uint64_t size, uint8_t ) {
