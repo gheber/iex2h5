@@ -93,4 +93,18 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
   add_test_case(producers)
 endif()
 
-add_subdirectory(src)
+file(GLOB_RECURSE all_source_files CONFIGURE_DEPENDS src/*.cpp)
+file(GLOB_RECURSE all_header_files CONFIGURE_DEPENDS src/*.hpp)
+
+add_executable(${PROJECT_NAME} ${all_source_files})
+set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+target_compile_options(${PROJECT_NAME} PRIVATE -w -fno-omit-frame-pointer)
+target_compile_definitions(${PROJECT_NAME} PRIVATE ARMA_NO_DEBUG IEX_PROGRAM_NAME="${PROJECT_NAME}")
+target_include_directories(${PROJECT_NAME} PRIVATE ${INCLUDE_DIRS} src)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBS})
+install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_STRIP} $<TARGET_FILE:${PROJECT_NAME}>
+    COMMENT "Stripping symbols from ${PROJECT_NAME} binary"
+)
