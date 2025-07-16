@@ -39,6 +39,12 @@ namespace {
     }
 }
 
+namespace global {
+    struct state {
+        static inline std::vector<uint64_t> flat_map;
+    };
+}
+
 namespace io::base {
     template <typename derived>
     struct consumer_t {
@@ -66,9 +72,11 @@ namespace io::base {
         }
         
         void day_begin(time_point day) {
-            resize(T, flat_map.size());
+            contract_t n_instruments;
+            n_instruments = global::state::flat_map.size();
+            resize(T, n_instruments);
             if constexpr (requires(derived d) { d.on_day_begin(day); })
-                static_cast<derived*>(this)->on_day_begin(day);            
+                static_cast<derived*>(this)->on_day_begin(day);    
         }
         void day_end(time_point day) {
             if constexpr (requires(derived d) { d.on_day_end(day); })
@@ -104,14 +112,15 @@ namespace io::base {
             } catch (const std::runtime_error& err){
                 ERROR << err.what() << " |" <<  utils::iex_symbol(iex_symbol) <<"|" << std::endl;
             }
-            //std::unique_lock lock(contract_id_mtx);
-            if( auto it = std::ranges::lower_bound(flat_map, base64_encoded_symbol); it != flat_map.end()) {
+            if( auto it = std::ranges::lower_bound(global::state::flat_map, base64_encoded_symbol); it != global::state::flat_map.end()) {
                 if((base64_encoded_symbol & SYMBOL_MASK) == (*it & SYMBOL_MASK))
                     return *it & CONTRACT_ID_MASK;
-                else flat_map.insert(it, base64_encoded_symbol | flat_map.size());
-            } else flat_map.emplace_back(base64_encoded_symbol | flat_map.size());
-            resize(T, flat_map.size());
-            return flat_map.size() - 1;
+                else global::state::flat_map.insert(it, base64_encoded_symbol | global::state::flat_map.size());
+            } else global::state::flat_map.emplace_back(base64_encoded_symbol | global::state::flat_map.size());
+            n_instruments = global::state::flat_map.size();
+
+            resize(T, n_instruments);
+            return n_instruments - 1;
         }
 
         static void batch_insert(std::vector<std::string> instruments) {
@@ -132,10 +141,10 @@ namespace io::base {
             for (char c : character_table) os << "'" << c << "',";
             TRACE << "size:" << character_table.size() << " {" << buf.str() << "}" << std::endl;
 
-            flat_map.reserve(flat_map.size() + instruments.size());
+            global::state::flat_map.reserve(global::state::flat_map.size() + instruments.size());
             for (const std::string& symbol : instruments)
-                flat_map.emplace_back( utils::base64::encode(symbol, flat_map.size()));
-            std::ranges::sort(flat_map);
+                global::state::flat_map.emplace_back( utils::base64::encode(symbol, global::state::flat_map.size()));
+            std::ranges::sort(global::state::flat_map);
         }
     
         h5::fd_t fd;

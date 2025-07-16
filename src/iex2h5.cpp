@@ -22,12 +22,6 @@
 #include <threadpool.hpp>
 #include <io.hpp>
 
-namespace io::base {
-    inline std::shared_mutex contract_id_mtx{};
-    inline std::shared_mutex container_mtx{};
-    inline std::vector<uint64_t> flat_map{};
-}
-
 using namespace std;
 
 int main(int argc, char **argv) {
@@ -163,7 +157,7 @@ int main(int argc, char **argv) {
 				h5::write(ds, active_days, h5::offset{0}, h5::count{active_days.size()});
 			} catch(const h5::error::any& err) {}
 
-			auto& all_contracts = io::base::consumer_t<consumer>::flat_map;
+			const auto& all_contracts = global::state::flat_map;
 			std::vector<std::string> asset_names(all_contracts.size());
 			TRACE << "instruments: " << all_contracts.size() << std::endl;
 			for(uint64_t contract: all_contracts) {
