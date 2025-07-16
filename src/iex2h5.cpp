@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
 	std::string hdf5_path, rts_path, instruments_path, trading_days_path, days, interval, start, stop, convert,
 		copyright = "Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada   info@vargaconsulting.ca";
 
-    unsigned gzip, ncores;
+    unsigned gzip;
 	std::string version( "\033[1m" IEX2H5_SOFTWARE_VERSION "\033[0m" " commit: "  IEX2H5_SOFTWARE_COMMIT_HASH);
 	argparse::ArgumentParser program(argv[0], version, argparse::default_arguments::none);
 	program.add_argument("-h", "--help")
@@ -88,7 +88,6 @@ int main(int argc, char **argv) {
 	program.add_argument("--rts-path").default_value(std::string("/time.txt")).help("hdf5-group/directory for regular time interval index");
 	program.add_argument("--instruments-path").default_value(std::string("/instruments.txt")).help("hdf5-group/directory for listed [symbols|assets|financial] instruments");
 	program.add_argument("--trading-days-path").default_value(std::string("/trading_days.txt")).help("hdf5-group/directory for active trading days");
-	program.add_argument("-n", "--ncores").default_value(std::thread::hardware_concurrency()).scan<'u', unsigned>().help("Number of worker units (threads or MPI ranks)");
 	program.add_argument("-g", "--gzip").default_value(static_cast<unsigned>(9)).scan<'u', unsigned>().help("0-9 0 for no compression, 9 for highest");
 	
 	program.add_argument("-c", "--convert").default_value(std::string("all")).choices("rts", "irts", "all").help("Which conversion pipeline to run: rts | irts | all (default)");
@@ -104,11 +103,11 @@ int main(int argc, char **argv) {
 	h5::mute();
 	
     try {
-		std::tie(interval, start, stop, hdf5_path, rts_path, instruments_path, trading_days_path, gzip, ncores, convert) = std::make_tuple(
+		std::tie(interval, start, stop, hdf5_path, rts_path, instruments_path, trading_days_path, gzip, convert) = std::make_tuple(
 			program.get<std::string>("--time-interval"), program.get<std::string>("--start"), program.get<std::string>("--stop"),
 			program.get<std::string>("--output"),
 			program.get<std::string>("--rts-path"), program.get<std::string>("--instruments-path"), program.get<std::string>("trading-days-path"),
-			program.get<unsigned>("--gzip"), program.get<unsigned>("--ncores"), program.get<std::string>("--convert"));
+			program.get<unsigned>("--gzip"), program.get<std::string>("--convert"));
  
 		using consumer = io::rts::consumer_t;
 		using duration = typename consumer::duration;
@@ -137,15 +136,9 @@ int main(int argc, char **argv) {
 
 		std::vector<std::string> files = utils::resolve_input_paths(program.get<std::vector<std::string>>("files"));
 		if(files.size()) {
-			bs::thread_pool pool(ncores);
-			TRACE << "nfiles:" << files.size()  << " cpu: " << ncores << std::endl;
-			
 			std::vector<std::future<void>> all_tasks;
-			for(std::string path: files)
-				all_tasks.emplace_back(
-					pool.submit_task( io::task<consumer>(path, start, interval, stop, fd, rts)));
-			for (auto& task : all_tasks) try {
-				task.get();  // this will rethrow any exception from the task
+			for(std::string path: files) try {
+				io::task<consumer>(path, start, interval, stop, fd, rts)();
 			} catch (const std::exception& ex) {
 				std::cerr << "[error] task threw exception: " << ex.what() << '\n';
 			} catch (...) {
