@@ -24,7 +24,7 @@ namespace io {
 		typename T::clock::time_point tp,
 		uint64_t stock,
 		float price,
-		uint64_t size,
+		uint32_t size,
 		uint8_t flag) {
 		c.heart_beat(tp);
 		c.day_begin(tp);
@@ -59,10 +59,10 @@ namespace io {
 		void end(time_point tp)            { consumer->end(tp); }
 		void day_begin(time_point day)     { consumer->day_begin(day); }
 		void day_end(time_point day)       { consumer->day_end(day); }
-		void trade_report(time_point t, uint64_t s, float p, uint64_t z, uint8_t f) { consumer->trade_report(t, s, p, z, f); }
-		void ask(time_point t, uint64_t s, float p, uint64_t z, uint8_t f)          { consumer->ask(t, s, p, z, f); }
-		void bid(time_point t, uint64_t s, float p, uint64_t z, uint8_t f)          { consumer->bid(t, s, p, z, f); }
-		void trade_break(time_point t, uint64_t s, float p, uint64_t z, uint8_t f)  { consumer->trade_break(t, s, p, z, f); }
+		void trade_report(time_point t, uint64_t s, float p, uint32_t z, uint8_t f) { consumer->trade_report(t, s, p, z, f); }
+		void ask(time_point t, uint64_t s, float p, uint32_t z, uint8_t f)          { consumer->ask(t, s, p, z, f); }
+		void bid(time_point t, uint64_t s, float p, uint32_t z, uint8_t f)          { consumer->bid(t, s, p, z, f); }
+		void trade_break(time_point t, uint64_t s, float p, uint32_t z, uint8_t f)  { consumer->trade_break(t, s, p, z, f); }
 
 		duration start, stop, heart_beat_interval;
 	private:

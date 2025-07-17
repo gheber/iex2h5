@@ -84,17 +84,17 @@ namespace io::base {
                 static_cast<derived*>(this)->on_day_end(day);
         }
 
-        void trade_report(time_point time, uint64_t symbol, float price, uint64_t size, uint8_t flag) {
+        void trade_report(time_point time, uint64_t symbol, float price, uint32_t size, uint8_t flag) {
             static_cast<derived*>(this)->on_trade_report(time, contracts[symbol], price, size, flag);
         }
 
-        void ask(time_point time, uint64_t symbol, float price, uint64_t size, uint8_t flag) {
+        void ask(time_point time, uint64_t symbol, float price, uint32_t size, uint8_t flag) {
             static_cast<derived*>(this)->on_ask(time, contracts[symbol], price, size, flag);
         }
-        void bid(time_point time, uint64_t symbol, float price, uint64_t size, uint8_t flag) {
+        void bid(time_point time, uint64_t symbol, float price, uint32_t size, uint8_t flag) {
             static_cast<derived*>(this)->on_bid(time, contracts[symbol], price, size, flag);
         }
-        void trade_break(time_point time, uint64_t symbol, float price, uint64_t size, uint8_t flag) {
+        void trade_break(time_point time, uint64_t symbol, float price, uint32_t size, uint8_t flag) {
             if constexpr (requires(derived& d) {d.trade_break(time, symbol, price, size, flag);})
                 static_cast<derived*>(this)->trade_break(time, contracts[symbol], price, size, flag);
         }
@@ -195,14 +195,14 @@ namespace io::rts {
         } catch (const h5::error::any& err) {
             ERROR << err.what() << std::endl;
         }
-        void append(time_point now, contract_t contract, float price, uint64_t size, bool is_bid, bool is_trade, bool is_ask) {
+        void append(time_point now, contract_t contract, float price, uint32_t size, bool is_bid, bool is_trade, bool is_ask) {
             uint16_t flags = 
                 (is_bid ? 1 << 0 : 0) | (is_trade ? 1 << 1 : 0) | (is_ask ? 1 << 2 : 0);
             h5::append(irts, iex::tick_t {
                 .time = to_ns(now), .price = price, .size = size, .contract_id = contract, .flags = flags });
         }
 
-        void on_trade_report(time_point time, contract_t id, float price, uint64_t size, uint8_t ) {
+        void on_trade_report(time_point time, contract_t id, float price, uint32_t size, uint8_t ) {
             h5_trade_volume(slot, id) += size;
             trade_size[id] += size;
             trade_count[id]++;
@@ -210,13 +210,13 @@ namespace io::rts {
             event_count[id]++;
             append(time, id, price, size, false, true, false); 
         }
-        void on_ask(time_point time, contract_t id, float price, uint64_t size, uint8_t flag) {
+        void on_ask(time_point time, contract_t id, float price, uint32_t size, uint8_t flag) {
             h5_ask_volume(slot, id) += size;
             fask(time, id, price, size);
             event_count[id]++;
             append(time, id, price, size, false, false, true); 
         }
-        void on_bid(time_point time, contract_t id, float price, uint64_t size, uint8_t flag) {
+        void on_bid(time_point time, contract_t id, float price, uint32_t size, uint8_t flag) {
             h5_bid_volume(slot, id) += size;
             fbid(time, id, price, size);
             event_count[id]++;

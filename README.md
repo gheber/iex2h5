@@ -15,13 +15,13 @@ A high-performance C++ utility for converting [IEX Transport Protocol (IEX-TP)][
 |---------------|-------------|-------------|-------------|---------------|---------------|---------------|---------------|
 | Ubuntu 22.04  |![gcc13][200]|![gcc14][201]|![gcc15][202]|![clang17][250]|![clang18][251]|![clang19][252]|![clang20][253]|
 | Ubuntu 24.04  |![gcc13][300]|![gcc14][301]|![gcc15][302]|![clang17][350]|![clang18][351]|![clang19][352]|![clang20][353]|
-| Mac OS 13     |![gcc13][400]|![gcc14][401]|![gcc15][402]|![clang17][450]|![clang18][451]|![clang19][452]|![clang20][453]|
 
 ## 📦 Installation
 ```bash
-sudo apt install libhdf5-dev pigz
-mkdir build && cd build && cmake ../
-make -j 12 && sudo make install
+sudo apt install build-essential cmake
+cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
+cmake --build build --parallel
+sudo cmake --install build
 ```
 
 # Example Usage: Convert IEX TOPS Dataset
@@ -38,32 +38,29 @@ This application allows users to convert captured packet data streams (e.g., DEE
 into structured HDF5 datasets for advanced analytics and seamless integration into
 scientific, engineering, and financial workflows.
 
-Usage: iex2h5 [--help] [--time-interval VAR] [--start VAR] [--stop VAR] [--output VAR] [--rts-path VAR] [--instruments-path VAR] [--trading-days-path VAR] [--gzip VAR] [--command VAR]
+Usage: ./build/iex2h5 [--help] [--version] [--time-interval VAR] [--start VAR] [--stop VAR] [--output VAR] [--rts-path VAR] [--instruments-path VAR] [--trading-days-path VAR] [--gzip VAR] [--convert VAR] [files]...
+
+Positional arguments:
+  files                [nargs: 0 or more] 
 
 Optional arguments:
   -h, --help           shows help message 
-  --time-interval      temporal interval in seconds, irts stream is converted into [nargs=0..1] [default: 10]
+  --version            Print version information 
+  --time-interval      temporal interval in hh::mm::ss format, irts stream is converted into [nargs=0..1] [default: "00:01:00"]
   --start              lower bound in UTC, considers events only after [nargs=0..1] [default: "14:30:00"]
   --stop               upper bound in UTC, considers events only before [nargs=0..1] [default: "21:00:00"]
   -o, --output         path to the HDF5 container [nargs=0..1] [default: "./iex.h5"]
   --rts-path           hdf5-group/directory for regular time interval index [nargs=0..1] [default: "/time.txt"]
   --instruments-path   hdf5-group/directory for listed [symbols|assets|financial] instruments [nargs=0..1] [default: "/instruments.txt"]
   --trading-days-path  hdf5-group/directory for active trading days [nargs=0..1] [default: "/trading_days.txt"]
-  -g, --gzip           0-9 0 for no compression, 9 for highest [nargs=0..1] [default: 0]
-  -c, --command        init  - intitializes hdf5 container with retrieved symbols from irts/stream
-                       irts  - saves captured events as irts stream
-                       rts   - converts irts to rts
-                       index - scans and rebuilds trading day index
-                       
- [nargs=0..1] [default: "rts"]
+  -g, --gzip           0-9 0 for no compression, 9 for highest [nargs=0..1] [default: 1]
+  -c, --convert        Which conversion pipeline to run: rts | irts | none | all  [nargs=0..1] [default: "all"]
 
 
 example:
-   unpigz -c tops.pcap.gz | iex2h5 --time-interval 10 --command init
-   for file in repo/*.pcap.gz; do unpigz -c ${file} | iex2h5 --command rts -o ${HOME}/iex.h5; done
-   iex2h5 --command index
+   iex2h5 --time-interval 10 -o ~/iex.h5  ~/data/**/*.pcap.gz
 
-Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada  info@vargaconsulting.ca
 ```
 
 ### Notice:
