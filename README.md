@@ -15,7 +15,6 @@ A high-performance C++ utility for converting [IEX Transport Protocol (IEX-TP)][
 |---------------|-------------|-------------|-------------|---------------|---------------|---------------|---------------|
 | Ubuntu 22.04  |![gcc13][200]|![gcc14][201]|![gcc15][202]|![clang17][250]|![clang18][251]|![clang19][252]|![clang20][253]|
 | Ubuntu 24.04  |![gcc13][300]|![gcc14][301]|![gcc15][302]|![clang17][350]|![clang18][351]|![clang19][352]|![clang20][353]|
-| Mac OS 13     |![gcc13][400]|![gcc14][401]|![gcc15][402]|![clang17][450]|![clang18][451]|![clang19][452]|![clang20][453]|
 
 ## 📦 Installation
 ```bash
