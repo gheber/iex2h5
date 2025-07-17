@@ -19,3 +19,9 @@ Further details:
 https://undocs.org/A/RES/ES-11/1
 https://digitallibrary.un.org/record/3965290/files/A_RES_ES-11_1-EN.pdf
 https://digitallibrary.un.org/record/3965290/files/A_RES_ES-11_1-RU.pdf
+
+
+
+---
+Modifications:
+- Bounds checking was disabled in the Armadillo source code by Steven Varga (Varga Consulting) in July 2025 for performance tuning in the IEX2H5 project.
