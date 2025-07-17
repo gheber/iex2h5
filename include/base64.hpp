@@ -40,7 +40,7 @@ namespace utils::base64::impl {
     constexpr uint8_t symbol_char_to_index(char c) {
         return (c >= 0 && c < 128 && CHAR_TO_INDEX[c] != -1)
             ? static_cast<uint8_t>(CHAR_TO_INDEX[c])
-            : throw std::invalid_argument( fmt_compat::format("invalid base64 symbol char {}", c ) );
+            : throw std::invalid_argument( iex::compat::format("invalid base64 symbol char {}", c ) );
     }
 
     inline uint64_t encode(uint64_t raw_symbol) {
