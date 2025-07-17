@@ -18,9 +18,10 @@ A high-performance C++ utility for converting [IEX Transport Protocol (IEX-TP)][
 
 ## 📦 Installation
 ```bash
-sudo apt install libhdf5-dev pigz
-mkdir build && cd build && cmake ../
-make -j 12 && sudo make install
+sudo apt install build-essential cmake
+cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
+cmake --build build --parallel
+sudo cmake --install build
 ```
 
 # Example Usage: Convert IEX TOPS Dataset
@@ -37,32 +38,29 @@ This application allows users to convert captured packet data streams (e.g., DEE
 into structured HDF5 datasets for advanced analytics and seamless integration into
 scientific, engineering, and financial workflows.
 
-Usage: iex2h5 [--help] [--time-interval VAR] [--start VAR] [--stop VAR] [--output VAR] [--rts-path VAR] [--instruments-path VAR] [--trading-days-path VAR] [--gzip VAR] [--command VAR]
+Usage: ./build/iex2h5 [--help] [--version] [--time-interval VAR] [--start VAR] [--stop VAR] [--output VAR] [--rts-path VAR] [--instruments-path VAR] [--trading-days-path VAR] [--gzip VAR] [--convert VAR] [files]...
+
+Positional arguments:
+  files                [nargs: 0 or more] 
 
 Optional arguments:
   -h, --help           shows help message 
-  --time-interval      temporal interval in seconds, irts stream is converted into [nargs=0..1] [default: 10]
+  --version            Print version information 
+  --time-interval      temporal interval in hh::mm::ss format, irts stream is converted into [nargs=0..1] [default: "00:01:00"]
   --start              lower bound in UTC, considers events only after [nargs=0..1] [default: "14:30:00"]
   --stop               upper bound in UTC, considers events only before [nargs=0..1] [default: "21:00:00"]
   -o, --output         path to the HDF5 container [nargs=0..1] [default: "./iex.h5"]
   --rts-path           hdf5-group/directory for regular time interval index [nargs=0..1] [default: "/time.txt"]
   --instruments-path   hdf5-group/directory for listed [symbols|assets|financial] instruments [nargs=0..1] [default: "/instruments.txt"]
   --trading-days-path  hdf5-group/directory for active trading days [nargs=0..1] [default: "/trading_days.txt"]
-  -g, --gzip           0-9 0 for no compression, 9 for highest [nargs=0..1] [default: 0]
-  -c, --command        init  - intitializes hdf5 container with retrieved symbols from irts/stream
-                       irts  - saves captured events as irts stream
-                       rts   - converts irts to rts
-                       index - scans and rebuilds trading day index
-                       
- [nargs=0..1] [default: "rts"]
+  -g, --gzip           0-9 0 for no compression, 9 for highest [nargs=0..1] [default: 1]
+  -c, --convert        Which conversion pipeline to run: rts | irts | none | all  [nargs=0..1] [default: "all"]
 
 
 example:
-   unpigz -c tops.pcap.gz | iex2h5 --time-interval 10 --command init
-   for file in repo/*.pcap.gz; do unpigz -c ${file} | iex2h5 --command rts -o ${HOME}/iex.h5; done
-   iex2h5 --command index
+   iex2h5 --time-interval 10 -o ~/iex.h5  ~/data/**/*.pcap.gz
 
-Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada  info@vargaconsulting.ca
 ```
 
 ### Notice:
@@ -84,3 +82,10 @@ Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
 [351]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-24.04-clang-18.svg
 [352]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-24.04-clang-19.svg
 [353]: https://vargaconsulting.github.io/iex2h5/badges/ubuntu-24.04-clang-20.svg
+[400]: https://vargaconsulting.github.io/iex2h5/badges/macos-13-gcc-13.svg
+[401]: https://vargaconsulting.github.io/iex2h5/badges/macos-13-gcc-14.svg
+[402]: https://vargaconsulting.github.io/iex2h5/badges/macos-13-gcc-15.svg
+[450]: https://vargaconsulting.github.io/iex2h5/badges/macos-13-clang-17.svg
+[451]: https://vargaconsulting.github.io/iex2h5/badges/macos-13-clang-18.svg
+[452]: https://vargaconsulting.github.io/iex2h5/badges/macos-13-clang-19.svg
+[453]: https://vargaconsulting.github.io/iex2h5/badges/macos-13-clang-20.svg

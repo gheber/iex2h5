@@ -25,14 +25,34 @@
 #include <producers.hpp>
 #include <utils.hpp>
 
+#ifdef HAVE_GOOGLE_PROFILER
+    #include <gperftools/profiler.h>
+#endif
+
 namespace io {
     template < typename consumer_t, typename... args_t>
     requires io::consumer_concept<consumer_t> && requires(args_t&&... args) { consumer_t(std::forward<args_t>(args)...); }
     std::function<void()> task(std::string path, std::string start, std::string interval, std::string stop, args_t&&... args) {
         return [=, ... args_captured = std::forward<args_t>(args)]() mutable {
             using duration = typename consumer_t::duration;
-            using gzip =  iex::pcap::producer_t<stream::gzip_t, consumer_t>;
-            using pcap =  iex::pcap::producer_t<stream::file_t, consumer_t>;
+            using pcap = iex::pcap::producer_t<stream::file_t, consumer_t>;
+            using pcapng = iex::pcapng::producer_t<stream::file_t, consumer_t>;
+            using gzip_pcap = iex::pcap::producer_t<stream::gzip_t, consumer_t>;
+            using gzip_pcapng = iex::pcapng::producer_t<stream::gzip_t, consumer_t>;
+
+            enum class format { GZIP_PCAP, GZIP_PCAPNG, PCAP, PCAPNG };
+            auto detect_format = [](FILE* fd) -> format {
+                if (utils::is_gzip(fd)) {
+                    uint32_t magic = stream::gzip_t::peek(fd);
+                    if (utils::pcapng::is_valid_magic(magic)) return format::GZIP_PCAPNG;
+                    if (utils::pcap::is_valid_magic(magic))  return format::GZIP_PCAP;
+                } else {
+                    uint32_t magic = stream::file_t::peek(fd);
+                    if (utils::pcapng::is_valid_magic(magic)) return format::PCAPNG;
+                    if (utils::pcap::is_valid_magic(magic))  return format::PCAP;
+                }
+                THROW_RUNTIME_ERROR("unsupported or unknown capture file format");
+            };
 
             FILE* fd = (path == "-") ? stdin : std::fopen(path.c_str(), "rb");
             if (!fd)
@@ -41,14 +61,25 @@ namespace io {
             auto [start_, interval_, stop_] = utils::strings_to_duration<duration>(start, interval, stop);
             consumer_t consumer(args_captured...);
             try {
-                if (utils::is_gzip(fd))
-                    gzip(fd, interval_).run(consumer, start_, stop_);
-                else pcap(fd, interval_).run(consumer, start_, stop_);
-            } catch (...) {
+                #ifdef HAVE_GOOGLE_PROFILER
+                    ProfilerStart("iex2h5.prof");
+                    INFO << "<<<<<<<<<<<<< profiler started (output: iex2h5.prof) >>>>>>>>>>>>" << std::endl;
+                #endif
+                switch (detect_format(fd)) {
+                    case format::PCAP: pcap(fd, interval_).run(consumer, start_, stop_); break;
+                    case format::PCAPNG: pcapng(fd, interval_).run(consumer, start_, stop_); break;
+                    case format::GZIP_PCAPNG: gzip_pcapng(fd, interval_).run(consumer, start_, stop_); break;
+                    case format::GZIP_PCAP: gzip_pcap(fd, interval_).run(consumer, start_, stop_); break;
+                    default: THROW_RUNTIME_ERROR("unsupported format...");
+                } 
+                #ifdef HAVE_GOOGLE_PROFILER
+                    ProfilerStop();
+                    INFO << "<<<<<<<<<<<< profiler stopped >>>>>>>>>>>>" << std::endl;
+                #endif
+            }catch (...) {
                 if (fd != stdin) std::fclose(fd);
                 throw;
             }
-    
             if (fd != stdin) std::fclose(fd);
         };
     }

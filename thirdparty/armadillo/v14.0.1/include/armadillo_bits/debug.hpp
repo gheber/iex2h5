@@ -468,10 +468,7 @@ template<typename T1>
 arma_hot
 inline
 void
-arma_check_bounds(const bool state, const T1& x)
-  {
-  if(state)  { arma_stop_bounds_error(arma_str::str_wrapper(x)); }
-  }
+arma_check_bounds(const bool state, const T1& x)noexcept {}
 
 
 template<typename T1>

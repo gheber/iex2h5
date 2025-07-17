@@ -4,7 +4,7 @@
  * Contact: info@vargaconsulting.ca */
 
 #pragma once
-
+#define ARMA_NO_DEBUG
 #include <vector>
 #include <string>
 #include <sstream>
@@ -244,6 +244,81 @@ namespace utils::pcap {
             magic == MAGIC_SWAP_USEC || magic == MAGIC_SWAP_NSEC;
     }
 } // namespace utils::pcap
+
+namespace utils::pcapng {
+    /** @ingroup utils_pcap
+     *  @brief PCAPNG magic number used in Section Header Block (SHB)
+     *         to identify the file format. Always little endian.
+     */
+    inline constexpr uint32_t MAGIC = 0x0A0D0D0A;
+
+    /** @ingroup utils_pcap
+     *  @brief Offsets within SHB for fields relevant to byte-order detection. */
+    enum : size_t {
+        SHB_MAGIC_OFFSET        = 0,  /*!< offset of magic number */
+        SHB_TOTAL_LENGTH_OFFSET = 4,  /*!< offset of total length field */
+        SHB_BYTE_ORDER_MAGIC_OFFSET = 8 /*!< offset of byte-order magic */
+    };
+
+    /** @ingroup utils_pcap
+     *  @brief PCAPNG byte-order magic (same bytes as pcap nanosecond magic).
+     *         Used at offset 8 in SHB to detect endianness.
+     */
+    inline constexpr uint32_t BYTE_ORDER_MAGIC_LE = 0x1A2B3C4D;
+    inline constexpr uint32_t BYTE_ORDER_MAGIC_BE = 0x4D3C2B1A;
+    /** @ingroup utils_pcap
+     *  @brief Checks whether the given value matches the PCAPNG magic number.
+     *  @param magic 32-bit value typically found at the start of a PCAPNG file.
+     *  @return true if the value equals `0x0A0D0D0A`, false otherwise.
+     */
+    inline bool is_valid_magic(uint32_t magic) {
+        return magic == MAGIC;
+    }
+    /** @ingroup utils_pcap
+     *  @brief Determines if the PCAPNG byte-order magic corresponds to little-endian.
+     *  @param byte_order_magic 32-bit value found at offset 0x08 in the SHB.
+     *  @return true if the byte order magic is `0x1A2B3C4D`, false otherwise.
+     */
+    inline bool is_little_endian(uint32_t byte_order_magic) {
+        return byte_order_magic == BYTE_ORDER_MAGIC_LE;
+    }
+    /** @ingroup utils_pcap
+     *  @brief Determines if the PCAPNG byte-order magic corresponds to big-endian.
+     *  @param byte_order_magic 32-bit value found at offset 0x08 in the SHB.
+     *  @return true if the byte order magic is `0x4D3C2B1A`, false otherwise.
+     */
+    inline bool is_big_endian(uint32_t byte_order_magic) {
+        return byte_order_magic == BYTE_ORDER_MAGIC_BE;
+    }
+    /** @ingroup utils_pcap
+     *  @brief Validates whether the given byte-order magic is recognized.
+     *  @param byte_order_magic 32-bit value from the Section Header Block.
+     *  @return true if the byte order magic matches either LE or BE constants.
+     */
+    inline bool is_valid_byte_order_magic(uint32_t byte_order_magic) {
+        return is_little_endian(byte_order_magic) || is_big_endian(byte_order_magic);
+    }
+    /** @ingroup utils_pcap
+     *  @brief Determines if the byte-order magic matches the host's native endianness.
+     *  @param byte_order_magic 32-bit value from the Section Header Block.
+     *  @return true if host and file endianness match, false if byteswapping is needed.
+     */
+    inline bool is_native_byte_order(uint32_t byte_order_magic) {
+        if constexpr (std::endian::native == std::endian::little)
+            return byte_order_magic == BYTE_ORDER_MAGIC_LE;
+        else
+            return byte_order_magic == BYTE_ORDER_MAGIC_BE;
+    }
+    /** @ingroup utils_pcap
+     *  @brief Checks if the captured PCAPNG block requires byte-swapping on this host.
+     *  @param byte_order_magic 32-bit value from the SHB block.
+     *  @return true if the byte order differs from host endian, false otherwise.
+     */
+    inline bool needs_byteswap(uint32_t byte_order_magic) {
+        return !is_native_byte_order(byte_order_magic);
+    }
+
+} // namespace utils::pcapng
 
 namespace utils {
     inline std::string trim(const std::string& str) {

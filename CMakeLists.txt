@@ -15,6 +15,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
+option(USE_GOOGLE_PROFILER "Enable Google CPU profiler if found" OFF)
+
 # automated versioning
 execute_process( COMMAND git rev-parse --short HEAD WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE GIT_COMMIT_HASH OUTPUT_STRIP_TRAILING_WHITESPACE )
 execute_process( COMMAND git describe --tags --abbrev=0 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE GIT_TAG OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -35,15 +37,19 @@ add_definitions(
   -DHOST_NAME_MAX=254
   -DVALUE_PRECISION=6
   -DSTAT_PRECISION=4
-  -DIEX_MAX_SYMBOLS=20000)
+  -DIEX_MAX_SYMBOLS=65536 )
 
 ## begin thirdparty library dependencies
-  add_subdirectory(thirdparty)
+  add_subdirectory(thirdparty EXCLUDE_FROM_ALL)
 ## end library dependencies
 
-include(FindHDF5)
+include(FindPackageHandleStandardArgs)
+
 find_package(Threads REQUIRED)
 find_package(ZLIB REQUIRED QUIET)
+find_path(GOOGLE_PROFILER_INCLUDE_DIR NAMES google/profiler.h)
+find_library(GOOGLE_PROFILER_LIBRARY NAMES profiler)
+find_package_handle_standard_args(GoogleProfiler DEFAULT_MSG GOOGLE_PROFILER_INCLUDE_DIR GOOGLE_PROFILER_LIBRARY)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 11.4.0)
     add_compile_options(-w)
@@ -52,9 +58,15 @@ endif()
 list(APPEND INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/include ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS} )
 list(APPEND LIBS 
   ${HDF5_C_LIBRARIES} ${ZLIB_LIBRARIES} 
-  libargparse libarmadillo libh5cpp libthreadpool
-  libdate_static libfmt_static libhiredis_static librediscpp_static libzng_static
+  libargparse libarmadillo libh5cpp libthreadpool libdate
+  libfmt_static libhiredis_static librediscpp_static libzng_static libhdf5_static
   )
+
+if(USE_GOOGLE_PROFILER AND GoogleProfiler_FOUND)
+  message(STATUS "Google Profiler enabled")
+  list(APPEND LIBS ${GOOGLE_PROFILER_LIBRARY})
+  add_definitions(-DHAVE_GOOGLE_PROFILER)
+endif()
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
   set(IEX_PCAP_FILE "${CMAKE_SOURCE_DIR}/data/iex-packets.pcap")
@@ -84,11 +96,25 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
 
   add_test_case(example)
   add_test_case(utils)
-  add_test_case(base76)
+  add_test_case(base64)
   add_test_case(filters)
   add_test_case(error)
   add_test_case(generics)
   add_test_case(producers)
 endif()
 
-add_subdirectory(src)
+file(GLOB_RECURSE all_source_files CONFIGURE_DEPENDS src/*.cpp)
+file(GLOB_RECURSE all_header_files CONFIGURE_DEPENDS src/*.hpp)
+
+add_executable(${PROJECT_NAME} ${all_source_files})
+set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+target_compile_options(${PROJECT_NAME} PRIVATE -w -fno-omit-frame-pointer)
+target_compile_definitions(${PROJECT_NAME} PRIVATE ARMA_NO_DEBUG IEX_PROGRAM_NAME="${PROJECT_NAME}")
+target_include_directories(${PROJECT_NAME} PRIVATE ${INCLUDE_DIRS} src)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBS})
+install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_STRIP} $<TARGET_FILE:${PROJECT_NAME}>
+    COMMENT "Stripping symbols from ${PROJECT_NAME} binary"
+)

@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ release ]
+    branches: [ release, staging ]
   pull_request:
-    branches: [ release ]
+    branches: [ release, staging ]
 
 jobs:
   build:
@@ -34,6 +34,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Set badge output directory
+      id: path
+      run: |
+        if [[ "${GITHUB_REF##*/}" == "staging" ]]; then
+          echo "dir=status-staging" >> $GITHUB_OUTPUT
+        else
+          echo "dir=status" >> $GITHUB_OUTPUT
+        fi
+
     - name: Check skip list
       id: skip_check
       run: |
@@ -42,6 +51,9 @@ jobs:
           "ubuntu-22.04:gcc-15"
           "ubuntu-24.04:gcc-15"
           "ubuntu-24.04:clang-17"
+          "macos-13:gcc-13"
+          "macos-13:gcc-14"
+          "macos-13:gcc-15"          
           )
 
         combo="${{ matrix.os }}:${{ matrix.compiler }}"
@@ -54,8 +66,15 @@ jobs:
         done
           echo "SKIP_COMPILE=false" >> "$GITHUB_ENV"
 
-    - name: Setup compiler
-      if: env.SKIP_COMPILE == 'false'
+    - name: Setup compiler on macOS
+      if: ${{ env.SKIP_COMPILE == 'false' && runner.os == 'macOS' }}
+      run: |
+        brew install llvm@${{ matrix.compiler-version }}
+        echo "CC=$(brew --prefix llvm@${{ matrix.compiler-version }})/bin/clang" >> $GITHUB_ENV
+        echo "CXX=$(brew --prefix llvm@${{ matrix.compiler-version }})/bin/clang++" >> $GITHUB_ENV
+
+    - name: Setup compiler on Linux
+      if: ${{ env.SKIP_COMPILE == 'false' && runner.os == 'Linux' }}
       run: |
         compiler="${{ matrix.compiler }}"
         version="${{ matrix.compiler-version }}"
@@ -84,9 +103,16 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Install system dependencies
-      if: env.SKIP_COMPILE == 'false'
+    - name: Install system dependencies on macOS
+      if: ${{ env.SKIP_COMPILE == 'false' && runner.os == 'macOS' }}
+      run: |
+        brew update
+        brew install hdf5
+
+    - name: Install system dependencies on Linux
+      if: ${{ env.SKIP_COMPILE == 'false' && runner.os == 'Linux' }}
       run: sudo apt-get update && sudo apt-get install -y libhdf5-dev
+
 
     - name: Configure
       if: env.SKIP_COMPILE == 'false'
@@ -132,6 +158,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Determine badge target directory
+        id: badge_dir
+        run: |
+          if [[ "${GITHUB_REF##*/}" == "staging" ]]; then
+            echo "dir=badges-staging" >> $GITHUB_OUTPUT
+          else
+            echo "dir=badges" >> $GITHUB_OUTPUT
+          fi
+
       - name: Download all badge status artifacts
         uses: actions/download-artifact@v4
         with:
@@ -141,7 +176,7 @@ jobs:
 
       - name: Generate SVG Badges
         run: |
-          mkdir -p badges
+          mkdir -p ${{ steps.badge_dir.outputs.dir }}
           for f in badge-status/*.json; do
             echo "file name: $f"
             [[ ! -f "$f" ]] && continue
@@ -151,13 +186,13 @@ jobs:
 
             color="gray"
             symbol="□"
-            
+
             [[ "$status" == "success" ]] && { symbol="✔"; color="green"; prefix="ok"; }
             [[ "$status" == "skipped" ]] && { symbol="○"; color="gray";  prefix="na"; }
             [[ "$status" == "failure" ]] && { symbol="✘"; color="red";   prefix="failed"; }
 
             label="${os}-${compiler}"
-            badge="badges/${label}.svg"
+            badge="${{ steps.badge_dir.outputs.dir }}/${label}.svg"
             echo "https://img.shields.io/badge/${prefix}-${symbol}-${color}.svg  $badge"
             curl -s "https://img.shields.io/badge/${prefix}-${symbol}-${color}.svg" -o "$badge"
           done
@@ -166,5 +201,5 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./badges
-          destination_dir: badges
+          publish_dir: ./${{ steps.badge_dir.outputs.dir }}
+          destination_dir: ${{ steps.badge_dir.outputs.dir }}

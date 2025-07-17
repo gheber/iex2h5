@@ -11,9 +11,10 @@
 
 namespace mock::random {
     const std::vector<std::string> symbols = {
-        "apple   ","forest  ","banana  ","candle  ","spider  ","ocean   ","silver  ",
-        "planet  ","hammer  ","mirror  ","castle  ","dragon  ","butter  ","sunset  ",
-        "rocket  ","winter  ","falcon  ","tunnel  ","glider  ","bridge  ","art     "};
+        "APPLE   ", "FOREST  ", "BANANA  ", "CANDLE  ", "SPIDER  ", "OCEAN   ", "SILVER  ",
+        "PLANET  ", "HAMMER  ", "MIRROR  ", "CASTLE  ", "DRAGON  ", "BUTTER  ", "SUNSET  ",
+        "ROCKET  ", "WINTER  ", "FALCON  ", "TUNNEL  ", "GLIDER  ", "BRIDGE  ", "ART     "
+    };
 }
 namespace mock::some {
     std::pair<uint64_t, std::string> symbols[] = {
