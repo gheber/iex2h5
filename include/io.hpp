@@ -25,6 +25,10 @@
 #include <producers.hpp>
 #include <utils.hpp>
 
+#ifdef HAVE_GOOGLE_PROFILER
+    #include <gperftools/profiler.h>
+#endif
+
 namespace io {
     template < typename consumer_t, typename... args_t>
     requires io::consumer_concept<consumer_t> && requires(args_t&&... args) { consumer_t(std::forward<args_t>(args)...); }
@@ -57,6 +61,10 @@ namespace io {
             auto [start_, interval_, stop_] = utils::strings_to_duration<duration>(start, interval, stop);
             consumer_t consumer(args_captured...);
             try {
+                #ifdef HAVE_GOOGLE_PROFILER
+                    ProfilerStart("iex2h5.prof");
+                    INFO << "<<<<<<<<<<<<< profiler started (output: iex2h5.prof) >>>>>>>>>>>>" << std::endl;
+                #endif
                 switch (detect_format(fd)) {
                     case format::PCAP: pcap(fd, interval_).run(consumer, start_, stop_); break;
                     case format::PCAPNG: pcapng(fd, interval_).run(consumer, start_, stop_); break;
@@ -64,6 +72,10 @@ namespace io {
                     case format::GZIP_PCAP: gzip_pcap(fd, interval_).run(consumer, start_, stop_); break;
                     default: THROW_RUNTIME_ERROR("unsupported format...");
                 } 
+                #ifdef HAVE_GOOGLE_PROFILER
+                    ProfilerStop();
+                    INFO << "<<<<<<<<<<<< profiler stopped >>>>>>>>>>>>" << std::endl;
+                #endif
             }catch (...) {
                 if (fd != stdin) std::fclose(fd);
                 throw;
