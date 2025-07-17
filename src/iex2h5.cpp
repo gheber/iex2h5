@@ -21,6 +21,7 @@
 #include <base64.hpp>
 #include <threadpool.hpp>
 #include <io.hpp>
+#include <licenses.hpp>
 
 #ifndef IEX_MAX_SYMBOLS
 	#define IEX_MAX_SYMBOLS 1 << 16
