@@ -22,6 +22,9 @@
 #include <threadpool.hpp>
 #include <io.hpp>
 
+#ifndef IEX_MAX_SYMBOLS
+	#define IEX_MAX_SYMBOLS 1 << 16
+#endif
 namespace io::base {
     inline std::shared_mutex contract_id_mtx{};
     inline std::shared_mutex container_mtx{};
@@ -125,7 +128,7 @@ int main(int argc, char **argv) {
 		if (H5Lexists(fd, instruments_path.data(), H5P_DEFAULT) > 0) {
 			ds = h5::open(fd, instruments_path);
 			instruments = h5::read<std::vector<std::string>>(fd, instruments_path);
-		} else ds = h5::create<std::string>(fd, instruments_path, h5::current_dims{0}, h5::max_dims{1<<14}, h5::chunk{512}| h5::gzip{9}); 
+		} else ds = h5::create<std::string>(fd, instruments_path, h5::current_dims{0}, h5::max_dims{IEX_MAX_SYMBOLS}, h5::chunk{512}| h5::gzip{9}); 
 		io::base::consumer_t<consumer>::batch_insert(instruments);
 		if (H5Lexists(fd, rts_path.data(), H5P_DEFAULT) <= 0) {
 			rts = utils::sequence<ch::seconds>(start, interval, stop);
