@@ -34,11 +34,11 @@ namespace iex {
 namespace h5 {
     template<> hid_t inline register_struct<iex::tick_t>(){
 		hid_t type = H5Tcreate(H5T_COMPOUND, sizeof (iex::tick_t));
-		H5Tinsert(type, "time",     0, H5T_STD_U64LE);
-		H5Tinsert(type, "price",    8, H5T_IEEE_F32LE);
-		H5Tinsert(type, "size",    12, H5T_STD_U64LE);
-		H5Tinsert(type, "contract",16, H5T_STD_U16LE);
-		H5Tinsert(type, "flag",    18, H5T_STD_U16LE);
+		H5Tinsert(type, "time",        0, H5T_STD_U64LE);
+		H5Tinsert(type, "price",       8, H5T_IEEE_F32LE);
+		H5Tinsert(type, "size",       12, H5T_STD_U32LE);
+		H5Tinsert(type, "contract_id",16, H5T_STD_U16LE);
+		H5Tinsert(type, "flags",      18, H5T_STD_U16LE);
 		return type;
 	};
 }

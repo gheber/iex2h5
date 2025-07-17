@@ -25,12 +25,6 @@
 #ifndef IEX_MAX_SYMBOLS
 	#define IEX_MAX_SYMBOLS 1 << 16
 #endif
-namespace io::base {
-    inline std::shared_mutex contract_id_mtx{};
-    inline std::shared_mutex container_mtx{};
-    inline std::vector<uint64_t> flat_map{};
-}
-
 using namespace std;
 
 int main(int argc, char **argv) {
@@ -39,7 +33,7 @@ int main(int argc, char **argv) {
 	std::string hdf5_path, rts_path, instruments_path, trading_days_path, days, interval, start, stop, convert,
 		copyright = "Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada   info@vargaconsulting.ca";
 
-    unsigned gzip;
+    unsigned compression_level;
 	std::string version( "\033[1m" IEX2H5_SOFTWARE_VERSION "\033[0m" " commit: "  IEX2H5_SOFTWARE_COMMIT_HASH);
 	argparse::ArgumentParser program(argv[0], version, argparse::default_arguments::none);
 	program.add_argument("-h", "--help")
@@ -91,9 +85,9 @@ int main(int argc, char **argv) {
 	program.add_argument("--rts-path").default_value(std::string("/time.txt")).help("hdf5-group/directory for regular time interval index");
 	program.add_argument("--instruments-path").default_value(std::string("/instruments.txt")).help("hdf5-group/directory for listed [symbols|assets|financial] instruments");
 	program.add_argument("--trading-days-path").default_value(std::string("/trading_days.txt")).help("hdf5-group/directory for active trading days");
-	program.add_argument("-g", "--gzip").default_value(static_cast<unsigned>(9)).scan<'u', unsigned>().help("0-9 0 for no compression, 9 for highest");
+	program.add_argument("-g", "--gzip").default_value(static_cast<unsigned>(1)).scan<'u', unsigned>().help("0-9 0 for no compression, 9 for highest");
 	
-	program.add_argument("-c", "--convert").default_value(std::string("all")).choices("rts", "irts", "all").help("Which conversion pipeline to run: rts | irts | all (default)");
+	program.add_argument("-c", "--convert").default_value(std::string("all")).choices("rts", "irts", "all", "none").help("Which conversion pipeline to run: rts | irts | all (default)");
 	program.add_argument("files").remaining();
 
 	try {
@@ -106,17 +100,21 @@ int main(int argc, char **argv) {
 	h5::mute();
 	
     try {
-		std::tie(interval, start, stop, hdf5_path, rts_path, instruments_path, trading_days_path, gzip, convert) = std::make_tuple(
+		std::tie(interval, start, stop, hdf5_path, rts_path, instruments_path, trading_days_path, compression_level, convert) = std::make_tuple(
 			program.get<std::string>("--time-interval"), program.get<std::string>("--start"), program.get<std::string>("--stop"),
 			program.get<std::string>("--output"),
 			program.get<std::string>("--rts-path"), program.get<std::string>("--instruments-path"), program.get<std::string>("trading-days-path"),
 			program.get<unsigned>("--gzip"), program.get<std::string>("--convert"));
- 
+
+		bool is_irts_enabled = (convert == "all" | convert =="irts"),
+			is_rts_enabled = (convert == "all" | convert =="rts");
 		using consumer = io::rts::consumer_t;
 		using duration = typename consumer::duration;
 
 		h5::fd_t fd;
 		h5::ds_t ds;
+		h5::dcpl_t dcpl = (compression_level != 0) ?  h5::gzip{compression_level} : h5::default_dcpl;
+
 		try {
 			fd = h5::open(hdf5_path, H5F_ACC_RDWR);
 		} catch (const h5::error::any& err){
@@ -129,19 +127,25 @@ int main(int argc, char **argv) {
 			instruments = h5::read<std::vector<std::string>>(fd, instruments_path);
 		} else ds = h5::create<std::string>(fd, instruments_path, h5::current_dims{0}, h5::max_dims{IEX_MAX_SYMBOLS}, h5::chunk{512}| h5::gzip{9}); 
 		io::base::consumer_t<consumer>::batch_insert(instruments);
-		if (H5Lexists(fd, rts_path.data(), H5P_DEFAULT) <= 0) {
-			rts = utils::sequence<ch::seconds>(start, interval, stop);
-			h5::ds_t ds = h5::write(fd, rts_path, rts);
-		} else {
-			h5::ds_t ds = h5::open(fd, rts_path);
-			rts = h5::read<std::vector<std::string>>(ds);
-		} 
+
+		auto load_or_create_rts = [&]() -> std::vector<std::string> {
+			h5::ds_t ds = H5Lexists(fd, rts_path.data(), H5P_DEFAULT) <= 0
+				? h5::write(fd, rts_path, utils::sequence<ch::seconds>(start, interval, stop))
+				: h5::open(fd, rts_path);
+			return h5::read<std::vector<std::string>>(ds);
+		};
+		if (is_rts_enabled)
+			rts = load_or_create_rts();
 
 		std::vector<std::string> files = utils::resolve_input_paths(program.get<std::vector<std::string>>("files"));
 		if(files.size()) {
-			std::vector<std::future<void>> all_tasks;
+			std::cout << "\033[1m[iex2h5]\033[0m Converting " << files.size()
+			<< " file" << (files.size() > 1 ? "s" : "") 
+			<< " into HDF5: using 1 thread — © Varga Consulting, 2017–2025\n"
+			<< "\033[1m[iex2h5]\033[0m Visit \033[4mhttps://vargaconsulting.github.io/iex2h5/\033[0m — Star it, Share it, Support Open Tools ⭐️\n";
+
 			for(std::string path: files) try {
-				io::task<consumer>(path, start, interval, stop, fd, rts)();
+				io::task<consumer>(path, start, interval, stop, fd, dcpl, rts, is_irts_enabled, is_rts_enabled)();
 			} catch (const std::exception& ex) {
 				std::cerr << "[error] task threw exception: " << ex.what() << '\n';
 			} catch (...) {
@@ -159,7 +163,7 @@ int main(int argc, char **argv) {
 				h5::write(ds, active_days, h5::offset{0}, h5::count{active_days.size()});
 			} catch(const h5::error::any& err) {}
 
-			auto& all_contracts = io::base::consumer_t<consumer>::flat_map;
+			const auto& all_contracts = global::state::flat_map;
 			std::vector<std::string> asset_names(all_contracts.size());
 			TRACE << "instruments: " << all_contracts.size() << std::endl;
 			for(uint64_t contract: all_contracts) {
@@ -177,6 +181,9 @@ int main(int argc, char **argv) {
 			} catch(const h5::error::any& err) {
 				ERROR << err.what() << std::endl;
 			} else INFO << "symbol/contract table has not changed, total: " << all_contracts.size() << std::endl;
+			std::cout << "\033[1m[iex2h5]\033[0m Conversion complete — all files processed successfully, total contracts:  " << all_contracts.size() << "\n"
+			"\033[1m[iex2h5]\033[0m This software uses the HDF5 library — © The HDF Group — BSD-licensed\n"
+			"\033[1m[iex2h5]\033[0m Market data © IEX — Investors Exchange. Attribution required. See https://iextrading.com" << std::endl;			
 		}
 	} catch( const std::exception& err ) {
 		cout << err.what() << endl;
