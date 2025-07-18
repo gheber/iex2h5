@@ -111,6 +111,8 @@ int main(int argc, char **argv) {
 		using consumer = io::hdf5::consumer_t;
 		using duration = typename consumer::duration;
 
+		std::string dispatch = file::detect_format(hdf5_path);
+	
 		h5::fd_t fd;
 		h5::ds_t ds;
 		h5::dcpl_t dcpl = (compression_level != 0) ?  h5::gzip{compression_level} : h5::default_dcpl;
@@ -143,9 +145,12 @@ int main(int argc, char **argv) {
 			<< " file" << (files.size() > 1 ? "s" : "") 
 			<< " into HDF5: using 1 thread — © Varga Consulting, 2017–2025\n"
 			<< "\033[1m[iex2h5]\033[0m Visit \033[4mhttps://vargaconsulting.github.io/iex2h5/\033[0m — Star it, Share it, Support Open Tools ⭐️\n";
-
+			
+			std::map<std::string, std::function<void(std::string)>> tasks = {
+				{"hdf5", io::task<consumer>(start, interval, stop, fd, dcpl, rts, is_irts_enabled, is_rts_enabled)}
+			};
 			for(std::string path: files) try {
-				io::task<consumer>(path, start, interval, stop, fd, dcpl, rts, is_irts_enabled, is_rts_enabled)();
+				tasks[dispatch](path);
 			} catch (const std::exception& ex) {
 				std::cerr << "[error] task threw exception: " << ex.what() << '\n';
 			} catch (...) {

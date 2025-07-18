@@ -30,16 +30,17 @@
 #endif
 
 namespace io {
-    template < typename consumer_t, typename... args_t>
-    requires io::consumer_concept<consumer_t> && requires(args_t&&... args) { consumer_t(std::forward<args_t>(args)...); }
-    std::function<void()> task(std::string path, std::string start, std::string interval, std::string stop, args_t&&... args) {
-        return [=, ... args_captured = std::forward<args_t>(args)]() mutable {
+    template <typename consumer_t, typename... args_t>
+    requires io::consumer_concept<consumer_t> &&
+             requires(args_t&&... args) { consumer_t(std::forward<args_t>(args)...); }
+    std::function<void(std::string)> task(std::string start, std::string interval, std::string stop, args_t&&... args) {
+        return [=, ... args_captured = std::forward<args_t>(args)](std::string path) mutable {
             using duration = typename consumer_t::duration;
             using pcap = iex::pcap::producer_t<stream::file_t, consumer_t>;
             using pcapng = iex::pcapng::producer_t<stream::file_t, consumer_t>;
             using gzip_pcap = iex::pcap::producer_t<stream::gzip_t, consumer_t>;
             using gzip_pcapng = iex::pcapng::producer_t<stream::gzip_t, consumer_t>;
-
+    
             enum class format { GZIP_PCAP, GZIP_PCAPNG, PCAP, PCAPNG };
             auto detect_format = [](FILE* fd) -> format {
                 if (utils::is_gzip(fd)) {
@@ -53,46 +54,38 @@ namespace io {
                 }
                 THROW_RUNTIME_ERROR("unsupported or unknown capture file format");
             };
-
+    
             FILE* fd = (path == "-") ? stdin : std::fopen(path.c_str(), "rb");
             if (!fd)
                 THROW_RUNTIME_ERROR("unable to open " + path);
+    
             INFO << "processing " << path << std::endl;
             auto [start_, interval_, stop_] = utils::strings_to_duration<duration>(start, interval, stop);
             consumer_t consumer(args_captured...);
+    
             try {
-                #ifdef HAVE_GOOGLE_PROFILER
-                    ProfilerStart("iex2h5.prof");
-                    INFO << "<<<<<<<<<<<<< profiler started (output: iex2h5.prof) >>>>>>>>>>>>" << std::endl;
-                #endif
+    #ifdef HAVE_GOOGLE_PROFILER
+                ProfilerStart("iex2h5.prof");
+                INFO << "<<<<<<<<<<<<< profiler started (output: iex2h5.prof) >>>>>>>>>>>>" << std::endl;
+    #endif
                 switch (detect_format(fd)) {
-                    case format::PCAP: pcap(fd, interval_).run(consumer, start_, stop_); break;
-                    case format::PCAPNG: pcapng(fd, interval_).run(consumer, start_, stop_); break;
-                    case format::GZIP_PCAPNG: gzip_pcapng(fd, interval_).run(consumer, start_, stop_); break;
-                    case format::GZIP_PCAP: gzip_pcap(fd, interval_).run(consumer, start_, stop_); break;
+                    case format::PCAP:       pcap(fd, interval_).run(consumer, start_, stop_); break;
+                    case format::PCAPNG:     pcapng(fd, interval_).run(consumer, start_, stop_); break;
+                    case format::GZIP_PCAP:  gzip_pcap(fd, interval_).run(consumer, start_, stop_); break;
+                    case format::GZIP_PCAPNG:gzip_pcapng(fd, interval_).run(consumer, start_, stop_); break;
                     default: THROW_RUNTIME_ERROR("unsupported format...");
-                } 
-                #ifdef HAVE_GOOGLE_PROFILER
-                    ProfilerStop();
-                    INFO << "<<<<<<<<<<<< profiler stopped >>>>>>>>>>>>" << std::endl;
-                #endif
-            }catch (...) {
+                }
+    #ifdef HAVE_GOOGLE_PROFILER
+                ProfilerStop();
+                INFO << "<<<<<<<<<<<< profiler stopped >>>>>>>>>>>>" << std::endl;
+    #endif
+            } catch (...) {
                 if (fd != stdin) std::fclose(fd);
                 throw;
             }
+    
             if (fd != stdin) std::fclose(fd);
         };
-    }
-
-    template<typename consumer_t, typename pool_t, typename tuple_t>
-    std::future<void> submit_task(pool_t& pool, tuple_t&& args) {
-        return std::apply(
-            [&](auto&&... unpacked_args) {
-                return pool.submit_task(io::task<consumer_t>(
-                    std::forward<decltype(unpacked_args)>(unpacked_args)...));
-            },
-            std::forward<tuple_t>(args)
-        );
     }
     
 } // namespace io
