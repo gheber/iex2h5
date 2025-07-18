@@ -99,55 +99,56 @@ int main(int argc, char **argv) {
 		
 	h5::mute();
     try {
+		std::map<std::string, std::function<void(std::string)>> tasks;
 		std::tie(interval, start, stop, hdf5_path, rts_path, instruments_path, trading_days_path, compression_level, convert) = std::make_tuple(
 			program.get<std::string>("--time-interval"), program.get<std::string>("--start"), program.get<std::string>("--stop"),
 			program.get<std::string>("--output"),
 			program.get<std::string>("--rts-path"), program.get<std::string>("--instruments-path"), program.get<std::string>("trading-days-path"),
 			program.get<unsigned>("--gzip"), program.get<std::string>("--convert"));
 
-		bool is_irts_enabled = (convert == "all" | convert =="irts"),
-			is_rts_enabled = (convert == "all" | convert =="rts");
-		using consumer = io::hdf5::consumer_t;
-		using duration = typename consumer::duration;
-
+		bool is_irts_enabled = (convert == "all" || convert =="irts"),
+			is_rts_enabled = (convert == "all" || convert =="rts");
 		std::string dispatch = file::detect_format(hdf5_path);
-	
 		h5::fd_t fd;
 		h5::ds_t ds;
-		h5::dcpl_t dcpl = (compression_level != 0) ?  h5::gzip{compression_level} : h5::default_dcpl;
-
-		try {
-			fd = h5::open(hdf5_path, H5F_ACC_RDWR);
-		} catch (const h5::error::any& err){
-			fd = h5::create(hdf5_path, H5F_ACC_TRUNC);
-		}
-
 		std::vector<std::string> instruments, rts;
-		if (H5Lexists(fd, instruments_path.data(), H5P_DEFAULT) > 0) {
-			ds = h5::open(fd, instruments_path);
-			instruments = h5::read<std::vector<std::string>>(fd, instruments_path);
-		} else ds = h5::create<std::string>(fd, instruments_path, h5::current_dims{0}, h5::max_dims{IEX_MAX_SYMBOLS}, h5::chunk{512}| h5::gzip{9}); 
-		global::state::batch_insert(instruments);
 
-		auto load_or_create_rts = [&]() -> std::vector<std::string> {
-			h5::ds_t ds = H5Lexists(fd, rts_path.data(), H5P_DEFAULT) <= 0
-				? h5::write(fd, rts_path, utils::sequence<ch::seconds>(start, interval, stop))
-				: h5::open(fd, rts_path);
-			return h5::read<std::vector<std::string>>(ds);
-		};
-		if (is_rts_enabled)
-			rts = load_or_create_rts();
+		if(dispatch == "hdf5") {	
+			using consumer = io::hdf5::consumer_t;
+			using duration = typename consumer::duration;
+			h5::dcpl_t dcpl = (compression_level != 0) ?  h5::gzip{compression_level} : h5::default_dcpl;
+
+			try {
+				fd = h5::open(hdf5_path, H5F_ACC_RDWR);
+			} catch (const h5::error::any& err){
+				fd = h5::create(hdf5_path, H5F_ACC_TRUNC);
+			}
+			
+			if (H5Lexists(fd, instruments_path.data(), H5P_DEFAULT) > 0) {
+				ds = h5::open(fd, instruments_path);
+				instruments = h5::read<std::vector<std::string>>(fd, instruments_path);
+			} else ds = h5::create<std::string>(fd, instruments_path, h5::current_dims{0}, h5::max_dims{IEX_MAX_SYMBOLS}, h5::chunk{512}| h5::gzip{9}); 
+			global::state::batch_insert(instruments);
+
+			auto load_or_create_rts = [&]() -> std::vector<std::string> {
+				h5::ds_t ds = H5Lexists(fd, rts_path.data(), H5P_DEFAULT) <= 0
+					? h5::write(fd, rts_path, utils::sequence<ch::seconds>(start, interval, stop))
+					: h5::open(fd, rts_path);
+				return h5::read<std::vector<std::string>>(ds);
+			};
+			if (is_rts_enabled)
+				rts = load_or_create_rts();
+			tasks.insert(
+				{"hdf5", io::task<consumer>(start, interval, stop, fd, dcpl, rts, is_irts_enabled, is_rts_enabled)});
+		}
 
 		std::vector<std::string> files = utils::resolve_input_paths(program.get<std::vector<std::string>>("files"));
 		if(files.size()) {
 			std::cout << "\033[1m[iex2h5]\033[0m Converting " << files.size()
 			<< " file" << (files.size() > 1 ? "s" : "") 
-			<< " into HDF5: using 1 thread — © Varga Consulting, 2017–2025\n"
+			<< " using backend: " << dispatch << " — using 1 thread — © Varga Consulting, 2017–2025\n"
 			<< "\033[1m[iex2h5]\033[0m Visit \033[4mhttps://vargaconsulting.github.io/iex2h5/\033[0m — Star it, Share it, Support Open Tools ⭐️\n";
-			
-			std::map<std::string, std::function<void(std::string)>> tasks = {
-				{"hdf5", io::task<consumer>(start, interval, stop, fd, dcpl, rts, is_irts_enabled, is_rts_enabled)}
-			};
+
 			for(std::string path: files) try {
 				tasks[dispatch](path);
 			} catch (const std::exception& ex) {
@@ -155,9 +156,9 @@ int main(int argc, char **argv) {
 			} catch (...) {
 				std::cerr << "[error] task threw unknown exception\n";
 			}
-					
+			
 			// condionally update trading days, given there has been RTS data processed
-			if (H5Lexists(fd, "stats", H5P_DEFAULT) > 0) try {
+			if (dispatch == "hdf5" && H5Lexists(fd, "stats", H5P_DEFAULT) > 0) try {
 				std::vector<std::string> active_days = h5::ls(fd, "stats");
 				h5::ds_t ds;
 				if (H5Lexists(fd, trading_days_path.data(), H5P_DEFAULT) > 0)
@@ -177,14 +178,16 @@ int main(int argc, char **argv) {
 				asset_names[index] = utils::trim(symbol);
 			}
 			TRACE << "asset decoding has been completed" << std::endl;
-			if (H5Fflush(fd, H5F_SCOPE_GLOBAL) < 0)
-				THROW_RUNTIME_ERROR("hdf5 flush has failed...");
-			if(instruments.size() != all_contracts.size()) try {
-				h5::set_extent(ds, h5::current_dims{asset_names.size()});
-				h5::write(fd, instruments_path, asset_names, h5::offset{0}, h5::count{asset_names.size()});
-			} catch(const h5::error::any& err) {
-				ERROR << err.what() << std::endl;
-			} else INFO << "symbol/contract table has not changed, total: " << all_contracts.size() << std::endl;
+			if (dispatch == "hdf5") {
+				if (H5Fflush(fd, H5F_SCOPE_GLOBAL) < 0)
+					THROW_RUNTIME_ERROR("hdf5 flush has failed...");
+				if(instruments.size() != all_contracts.size()) try {
+					h5::set_extent(ds, h5::current_dims{asset_names.size()});
+					h5::write(fd, instruments_path, asset_names, h5::offset{0}, h5::count{asset_names.size()});
+				} catch(const h5::error::any& err) {
+					ERROR << err.what() << std::endl;
+				} else INFO << "symbol/contract table has not changed, total: " << all_contracts.size() << std::endl;
+			}
 			std::cout << "\033[1m[iex2h5]\033[0m Conversion complete — all files processed successfully, total contracts:  " << all_contracts.size() << "\n"
 			"\033[1m[iex2h5]\033[0m This software uses the HDF5 library — © The HDF Group — BSD-licensed\n"
 			"\033[1m[iex2h5]\033[0m Market data © IEX — Investors Exchange. Attribution required. See https://iextrading.com" << std::endl;			
