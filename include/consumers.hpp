@@ -54,8 +54,8 @@ namespace io::base {
         using duration    = typename clock::duration;
         using contract_t  = uint16_t;
 
-        consumer_t(h5::fd_t fd, std::vector<std::string> rts, bool is_irts_enabled, bool is_rts_enabled)
-            : fd(fd), T(rts.size()), contracts(*this), rts(rts), is_irts_enabled(is_irts_enabled), is_rts_enabled(is_rts_enabled) {
+        consumer_t(std::vector<std::string> rts, bool is_irts_enabled, bool is_rts_enabled)
+            : T(rts.size()), contracts(*this), rts(rts), is_irts_enabled(is_irts_enabled), is_rts_enabled(is_rts_enabled) {
             std::vector<duration> time = utils::string_to_duration<duration>(rts);
             utils::require_uniform_interval(time);
             std::tie(start, interval, stop) = std::make_tuple(time.front(), time[1] - time[0], time.back());
@@ -147,10 +147,10 @@ namespace io::base {
             std::ranges::sort(global::state::flat_map);
         }
     
-        h5::fd_t fd;
+
         contract_t T, I; //< time and instruments
         consumer_t<derived>& contracts;
-        std::string rts_path, asset_path, tradingdays_path;
+
         duration start, stop, interval;
         std::vector<std::string> rts, trading_days;
         bool is_irts_enabled, is_rts_enabled;
@@ -162,14 +162,14 @@ namespace io::base {
     };
 } // namespace io::base
 
-namespace io::rts {
+namespace io::hdf5 {
     struct consumer_t : public io::base::consumer_t<consumer_t> {
         using base = io::base::consumer_t<consumer_t>;
         using typename base::clock, typename base::duration, typename base::time_point, typename base::contract_t;
-        using base::fd, base::rts, base::I, base::T, base::contracts;
+        using base::rts, base::I, base::T, base::contracts;
         
         consumer_t(h5::fd_t fd, h5::dcpl_t dcpl, std::vector<std::string> rts, bool is_irts_enabled, bool is_rts_enabled)
-            : base(fd, rts, is_irts_enabled, is_rts_enabled), dcpl(dcpl) {
+            : base(rts, is_irts_enabled, is_rts_enabled), fd(fd), dcpl(dcpl) {
             INFO << "starting consumer... " << std::hex << this << std::dec <<  std::endl;
         }
         void on_resize(size_t R, size_t C) { //n_rows, n_cols
@@ -276,8 +276,10 @@ namespace io::rts {
 
         uint64_t slot, max_slot, counter = 0;
     private:
-        h5::pt_t irts;
+        std::string rts_path, asset_path, tradingdays_path;
+        h5::fd_t fd;
         h5::dcpl_t dcpl;
+        h5::pt_t irts;
         time_point last_time, today;
         arma::fmat h5_bid, h5_ask, h5_trade;
         arma::umat h5_bid_volume, h5_ask_volume, h5_trade_volume;

@@ -108,7 +108,7 @@ int main(int argc, char **argv) {
 
 		bool is_irts_enabled = (convert == "all" | convert =="irts"),
 			is_rts_enabled = (convert == "all" | convert =="rts");
-		using consumer = io::rts::consumer_t;
+		using consumer = io::hdf5::consumer_t;
 		using duration = typename consumer::duration;
 
 		h5::fd_t fd;
