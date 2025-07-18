@@ -11,6 +11,8 @@
 #include <ranges>
 #include <string>
 #include <filesystem>
+#include <csignal>
+#include <atomic>
 
 #include <argparse>
 #include <error.hpp>
@@ -25,6 +27,11 @@
 #ifndef IEX_MAX_SYMBOLS
 	#define IEX_MAX_SYMBOLS 1 << 16
 #endif
+void signal_handler(int signal) {
+	INFO << "received signal: " << signal << ", initiating shutdown..." << std::endl;
+	global::state::shutdown_requested.store(true);
+}
+
 using namespace std;
 
 int main(int argc, char **argv) {
@@ -96,7 +103,10 @@ int main(int argc, char **argv) {
 		std::cerr << err.what() << std::endl;
 		return 1;
 	}
-		
+
+	std::signal(SIGINT, signal_handler); std::signal(SIGTERM, signal_handler);
+	std::signal(SIGHUP, signal_handler); std::signal(SIGQUIT, signal_handler);
+	
 	h5::mute();
 	
     try {
