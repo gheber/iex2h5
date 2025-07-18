@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
 		cout << "\033[1m" "example:" "\033[0m" <<endl;
 		cout << "   " << argv[0] << " --time-interval 10 -o ~/iex.h5  ~/data/**/*.pcap.gz" << endl;
 		cout << endl;
-		cout << "This program uses the HDF5 library via dynamic linking. HDF5 is © The HDF Group and licensed under a BSD-style license." << endl;
+		cout << "\033[1m[iex2h5]\033[0m Market data © IEX — Investors Exchange. Attribution required. See https://iextrading.com" << std::endl;
 		cout << copyright << endl << endl;
 		std::exit(0);
 	})
@@ -69,7 +69,6 @@ int main(int argc, char **argv) {
 		<< " " << version << "\n\n"
 		<< "IEX2H5: High-performance IEX market data importer\n"
 		<< "Converts DEEP/TOPS pcap captures into HDF5 datasets\n\n"
-		<< "This program uses the HDF5 library via dynamic linking. HDF5 is © The HDF Group and licensed under a BSD-style license.\n"
 		<< "Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada   info@vargaconsulting.ca\n"
 		<< "All rights reserved. info@vargaconsulting.ca\n"
 		<< "Licensed under the MIT License.\n"
@@ -89,7 +88,9 @@ int main(int argc, char **argv) {
 	program.add_argument("-g", "--gzip").default_value(static_cast<unsigned>(1)).scan<'u', unsigned>().help("0-9 0 for no compression, 9 for highest");
 	
 	program.add_argument("-c", "--convert").default_value(std::string("all")).choices("rts", "irts", "all", "none").help("Which conversion pipeline to run: rts | irts | none | all");
-	program.add_argument("files").remaining();
+	program.add_argument("remaining").remaining();
+	program.add_argument("--third-party-licenses").nargs('*').default_value(std::vector<std::string>{"all"}).implicit_value("all")
+		.help("Print license(s) for a third-party library (or 'all | license 01 [, license 02, ...]')");
 
 	try {
 		program.parse_args(argc, argv);
@@ -97,9 +98,39 @@ int main(int argc, char **argv) {
 		std::cerr << err.what() << std::endl;
 		return 1;
 	}
-		
+	if (program.is_used("--third-party-licenses")) {
+		std::map<std::string, std::string> license_map;
+		for (const auto& [name, _, content] : licenses::thirdparty)
+			license_map[name] = content;
+		if (program.is_used("remaining") ){
+			std::vector remaining = program.get<std::vector<std::string>>("remaining");
+			if(remaining.empty() || remaining.front() == "all") for (const auto& [name, text] : license_map)
+				std::cout << "\n=== " << name << " ===\n" << text << "\n";
+			else for(std::string key: remaining) {
+				auto it = license_map.find(key);
+				if (it != license_map.end())
+					std::cout << "\n=== " << it->first << " ===\n" << it->second << "\n";
+				else {
+					std::cout << "Unknown license: " << key << "\n";
+					std::cout << "Valid licenses:\n";
+					for (const auto& [name, _] : license_map)
+						std::cerr << "  - " << name << "\n";
+					return 1;				
+				}
+			}
+		} else {
+			std::cout<< "Please choose one of the following: ";
+			for (auto it = license_map.begin(); it != license_map.end(); ++it) {
+				std::cout << it->first;
+				if (std::next(it) != license_map.end())
+					std::cout << ", ";
+			}
+			std::cout << std::endl << std::endl;
+		}
+		return 0;
+	}
+
 	h5::mute();
-	
     try {
 		std::tie(interval, start, stop, hdf5_path, rts_path, instruments_path, trading_days_path, compression_level, convert) = std::make_tuple(
 			program.get<std::string>("--time-interval"), program.get<std::string>("--start"), program.get<std::string>("--stop"),
@@ -138,7 +169,7 @@ int main(int argc, char **argv) {
 		if (is_rts_enabled)
 			rts = load_or_create_rts();
 
-		std::vector<std::string> files = utils::resolve_input_paths(program.get<std::vector<std::string>>("files"));
+		std::vector<std::string> files = utils::resolve_input_paths(program.get<std::vector<std::string>>("remaining"));
 		if(files.size()) {
 			std::cout << "\033[1m[iex2h5]\033[0m Converting " << files.size()
 			<< " file" << (files.size() > 1 ? "s" : "") 
@@ -183,7 +214,6 @@ int main(int argc, char **argv) {
 				ERROR << err.what() << std::endl;
 			} else INFO << "symbol/contract table has not changed, total: " << all_contracts.size() << std::endl;
 			std::cout << "\033[1m[iex2h5]\033[0m Conversion complete — all files processed successfully, total contracts:  " << all_contracts.size() << "\n"
-			"\033[1m[iex2h5]\033[0m This software uses the HDF5 library — © The HDF Group — BSD-licensed\n"
 			"\033[1m[iex2h5]\033[0m Market data © IEX — Investors Exchange. Attribution required. See https://iextrading.com" << std::endl;			
 		}
 	} catch( const std::exception& err ) {
