@@ -45,7 +45,14 @@ namespace global {
         static inline std::vector<uint64_t> flat_map;
     };
 }
-
+namespace h5 {
+    template<typename T, class... args_t>
+    inline void write_or_replace(h5::fd_t fd, const std::string& path, const T& data, args_t&&... args) {
+        if (H5Lexists(fd, path.c_str(), H5P_DEFAULT) > 0)
+            H5Ldelete(fd, path.c_str(), H5P_DEFAULT);
+        h5::write(fd, path, data, args...);
+    }
+}
 namespace io::base {
     template <typename derived>
     struct consumer_t {
