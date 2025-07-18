@@ -98,7 +98,6 @@ int main(int argc, char **argv) {
 	}
 		
 	h5::mute();
-	
     try {
 		std::tie(interval, start, stop, hdf5_path, rts_path, instruments_path, trading_days_path, compression_level, convert) = std::make_tuple(
 			program.get<std::string>("--time-interval"), program.get<std::string>("--start"), program.get<std::string>("--stop"),
@@ -128,7 +127,7 @@ int main(int argc, char **argv) {
 			ds = h5::open(fd, instruments_path);
 			instruments = h5::read<std::vector<std::string>>(fd, instruments_path);
 		} else ds = h5::create<std::string>(fd, instruments_path, h5::current_dims{0}, h5::max_dims{IEX_MAX_SYMBOLS}, h5::chunk{512}| h5::gzip{9}); 
-		io::base::consumer_t<consumer>::batch_insert(instruments);
+		global::state::batch_insert(instruments);
 
 		auto load_or_create_rts = [&]() -> std::vector<std::string> {
 			h5::ds_t ds = H5Lexists(fd, rts_path.data(), H5P_DEFAULT) <= 0

@@ -43,6 +43,28 @@ namespace {
 namespace global {
     struct state {
         static inline std::vector<uint64_t> flat_map;
+        static void batch_insert(std::vector<std::string> instruments) {
+            std::ranges::transform(instruments, instruments.begin(), [](const std::string& symbol) {
+                if (symbol.size() > 8) throw std::invalid_argument("Symbol too long: " + symbol);
+                return symbol.size() < 8 ? utils::pad(symbol, 8, ' ') : symbol;
+            });
+            std::unordered_set<std::string_view> seen;
+            for (const auto& symbol : instruments) // verify if all elements are uniqe
+                if (!seen.insert(symbol).second) throw std::invalid_argument("Duplicate symbol in instruments: " + symbol);
+            std::set<char> character_table;
+            for (const auto& symbol : instruments) for (char c : symbol)
+                character_table.insert(c);
+        
+            std::stringbuf buf;
+            std::ostream os(&buf);
+            for (char c : character_table) os << "'" << c << "',";
+            TRACE << "size:" << character_table.size() << " {" << buf.str() << "}" << std::endl;
+
+            global::state::flat_map.reserve(global::state::flat_map.size() + instruments.size());
+            for (const std::string& symbol : instruments)
+                global::state::flat_map.emplace_back( utils::base64::encode(symbol, global::state::flat_map.size()));
+            std::ranges::sort(global::state::flat_map);
+        }
     };
 }
 
@@ -124,33 +146,8 @@ namespace io::base {
             return n_instruments - 1;
         }
 
-        static void batch_insert(std::vector<std::string> instruments) {
-            std::ranges::transform(instruments, instruments.begin(), [](const std::string& symbol) {
-                if (symbol.size() > 8) throw std::invalid_argument("Symbol too long: " + symbol);
-                return symbol.size() < 8 ? utils::pad(symbol, 8, ' ') : symbol;
-            });
-            std::unordered_set<std::string_view> seen;
-            for (const auto& symbol : instruments) // verify if all elements are uniqe
-                if (!seen.insert(symbol).second) throw std::invalid_argument("Duplicate symbol in instruments: " + symbol);
-            std::set<char> character_table;
-            for (const auto& symbol : instruments) for (char c : symbol)
-                character_table.insert(c);
-        
-            std::stringbuf buf;
-            std::ostream os(&buf);
-            for (char c : character_table) os << "'" << c << "',";
-            TRACE << "size:" << character_table.size() << " {" << buf.str() << "}" << std::endl;
-
-            global::state::flat_map.reserve(global::state::flat_map.size() + instruments.size());
-            for (const std::string& symbol : instruments)
-                global::state::flat_map.emplace_back( utils::base64::encode(symbol, global::state::flat_map.size()));
-            std::ranges::sort(global::state::flat_map);
-        }
-    
-
         contract_t T, I; //< time and instruments
         consumer_t<derived>& contracts;
-
         duration start, stop, interval;
         std::vector<std::string> rts, trading_days;
         bool is_irts_enabled, is_rts_enabled;
