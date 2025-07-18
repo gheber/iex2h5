@@ -155,7 +155,10 @@ int main(int argc, char **argv) {
 			<< "\033[1m[iex2h5]\033[0m Visit \033[4mhttps://vargaconsulting.github.io/iex2h5/\033[0m — Star it, Share it, Support Open Tools ⭐️\n";
 
 			for(std::string path: files) try {
-				io::task<consumer>(path, start, interval, stop, fd, dcpl, rts, is_irts_enabled, is_rts_enabled)();
+				if( !global::state::shutdown_requested.load())
+					io::task<consumer>(path, start, interval, stop, fd, dcpl, rts, is_irts_enabled, is_rts_enabled)();
+			} catch (const global::shutdown_exception& ex) {
+				std::cout << ex.what() << std::endl;
 			} catch (const std::exception& ex) {
 				std::cerr << "[error] task threw exception: " << ex.what() << '\n';
 			} catch (...) {
@@ -191,9 +194,10 @@ int main(int argc, char **argv) {
 			} catch(const h5::error::any& err) {
 				ERROR << err.what() << std::endl;
 			} else INFO << "symbol/contract table has not changed, total: " << all_contracts.size() << std::endl;
-			std::cout << "\033[1m[iex2h5]\033[0m Conversion complete — all files processed successfully, total contracts:  " << all_contracts.size() << "\n"
-			"\033[1m[iex2h5]\033[0m This software uses the HDF5 library — © The HDF Group — BSD-licensed\n"
-			"\033[1m[iex2h5]\033[0m Market data © IEX — Investors Exchange. Attribution required. See https://iextrading.com" << std::endl;			
+			if(global::state::shutdown_requested.load())
+				std::cout << "\033[1m[iex2h5]\033[0m Interrupted — graceful shutdown in progress...\n";
+			else std::cout << "\033[1m[iex2h5]\033[0m Conversion complete — all files processed successfully, total contracts:  " << all_contracts.size() << "\n";
+			std::cout <<"\033[1m[iex2h5]\033[0m Market data © IEX — Investors Exchange. Attribution required. See https://iextrading.com" << std::endl;			
 		}
 	} catch( const std::exception& err ) {
 		cout << err.what() << endl;
