@@ -98,7 +98,11 @@ namespace io::base {
             if constexpr (requires(derived& d) {d.trade_break(time, symbol, price, size, flag);})
                 static_cast<derived*>(this)->trade_break(time, contracts[symbol], price, size, flag);
         }
-        
+        void syscall(time_point time, iex::system::message msg) {
+            if constexpr (requires(derived& d) {d.on_syscall(time, msg);})
+                static_cast<derived*>(this)->on_syscall(time, msg);            
+        }
+
         [[nodiscard]] contract_t operator[](uint64_t iex_symbol) try {
             return find_or_insert(iex_symbol);
         } catch (const std::invalid_argument& err){
@@ -270,6 +274,7 @@ namespace io::hdf5 {
             event_count[id]++;
             if(is_irts_enabled) append(time, id, price, size, true, false, false); 
         }
+    
         void on_heart_beat(time_point time) {
             auto tp = date::format("%H:%M:%S", date::floor<std::chrono::seconds>(time));
             std::cout << clear << status << " " << tp << std::flush;
