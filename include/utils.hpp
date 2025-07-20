@@ -27,6 +27,12 @@
 namespace utils {
 	namespace ch = std::chrono;
     
+    inline uint64_t to_ns(std::chrono::system_clock::time_point tp) {
+        return static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(tp.time_since_epoch()).count()
+        );
+    }
+
     inline std::string iex_symbol(uint64_t iex_symbol) {
         return std::string(reinterpret_cast<const char*>(&iex_symbol), 8);
     }

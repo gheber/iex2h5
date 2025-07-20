@@ -32,42 +32,6 @@
 #include <base64.hpp>
 #include <iex.hpp>
 
-namespace {
-    inline uint64_t to_ns(std::chrono::system_clock::time_point tp) {
-        return static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::nanoseconds>(tp.time_since_epoch()).count()
-        );
-    }
-}
-
-namespace global {
-    struct state {
-        static inline std::vector<uint64_t> flat_map;
-        static void batch_insert(std::vector<std::string> instruments) {
-            std::ranges::transform(instruments, instruments.begin(), [](const std::string& symbol) {
-                if (symbol.size() > 8) throw std::invalid_argument("Symbol too long: " + symbol);
-                return symbol.size() < 8 ? utils::pad(symbol, 8, ' ') : symbol;
-            });
-            std::unordered_set<std::string_view> seen;
-            for (const auto& symbol : instruments) // verify if all elements are uniqe
-                if (!seen.insert(symbol).second) throw std::invalid_argument("Duplicate symbol in instruments: " + symbol);
-            std::set<char> character_table;
-            for (const auto& symbol : instruments) for (char c : symbol)
-                character_table.insert(c);
-        
-            std::stringbuf buf;
-            std::ostream os(&buf);
-            for (char c : character_table) os << "'" << c << "',";
-            TRACE << "size:" << character_table.size() << " {" << buf.str() << "}" << std::endl;
-
-            global::state::flat_map.reserve(global::state::flat_map.size() + instruments.size());
-            for (const std::string& symbol : instruments)
-                global::state::flat_map.emplace_back( utils::base64::encode(symbol, global::state::flat_map.size()));
-            std::ranges::sort(global::state::flat_map);
-        }
-    };
-}
-
 namespace io::base {
     template <typename derived>
     struct consumer_t {
@@ -93,7 +57,7 @@ namespace io::base {
         
         void day_begin(time_point day) {
             contract_t n_instruments;
-            n_instruments = global::state::flat_map.size();
+            n_instruments = flat_map.size();
             resize(T, n_instruments);
             if constexpr (requires(derived d) { d.on_day_begin(day); })
                 static_cast<derived*>(this)->on_day_begin(day);    
@@ -107,7 +71,6 @@ namespace io::base {
         void trade_report(time_point time, uint64_t symbol, float price, uint32_t size, uint8_t flag) {
             static_cast<derived*>(this)->on_trade_report(time, contracts[symbol], price, size, flag);
         }
-
         void ask(time_point time, uint64_t symbol, float price, uint32_t size, uint8_t flag) {
             static_cast<derived*>(this)->on_ask(time, contracts[symbol], price, size, flag);
         }
@@ -125,7 +88,28 @@ namespace io::base {
             TRACE << err.what() << " <" << utils::iex_symbol(iex_symbol) << ">" << std::endl;
             return 0;
         }
+        void batch_insert(std::vector<std::string> instruments) {
+            std::ranges::transform(instruments, instruments.begin(), [](const std::string& symbol) {
+                if (symbol.size() > 8) throw std::invalid_argument("Symbol too long: " + symbol);
+                return symbol.size() < 8 ? utils::pad(symbol, 8, ' ') : symbol;
+            });
+            std::unordered_set<std::string_view> seen;
+            for (const auto& symbol : instruments) // verify if all elements are uniqe
+                if (!seen.insert(symbol).second) throw std::invalid_argument("Duplicate symbol in instruments: " + symbol);
+            std::set<char> character_table;
+            for (const auto& symbol : instruments) for (char c : symbol)
+                character_table.insert(c);
         
+            std::stringbuf buf;
+            std::ostream os(&buf);
+            for (char c : character_table) os << "'" << c << "',";
+            TRACE << "size:" << character_table.size() << " {" << buf.str() << "}" << std::endl;
+
+            flat_map.reserve(flat_map.size() + instruments.size());
+            for (const std::string& symbol : instruments)
+                flat_map.emplace_back( utils::base64::encode(symbol, flat_map.size()));
+            std::ranges::sort(flat_map);
+        }        
         contract_t find_or_insert(uint64_t iex_symbol) {
             uint64_t base64_encoded_symbol, n_instruments;
             try {
@@ -133,12 +117,12 @@ namespace io::base {
             } catch (const std::runtime_error& err){
                 ERROR << err.what() << " |" <<  utils::iex_symbol(iex_symbol) <<"|" << std::endl;
             }
-            if( auto it = std::ranges::lower_bound(global::state::flat_map, base64_encoded_symbol); it != global::state::flat_map.end()) {
+            if( auto it = std::ranges::lower_bound(flat_map, base64_encoded_symbol); it != flat_map.end()) {
                 if((base64_encoded_symbol & SYMBOL_MASK) == (*it & SYMBOL_MASK))
                     return *it & CONTRACT_ID_MASK;
-                else global::state::flat_map.insert(it, base64_encoded_symbol | global::state::flat_map.size());
-            } else global::state::flat_map.emplace_back(base64_encoded_symbol | global::state::flat_map.size());
-            n_instruments = global::state::flat_map.size();
+                else flat_map.insert(it, base64_encoded_symbol | flat_map.size());
+            } else flat_map.emplace_back(base64_encoded_symbol | flat_map.size());
+            n_instruments = flat_map.size();
 
             resize(T, n_instruments);
             return n_instruments - 1;
@@ -162,8 +146,7 @@ namespace io::base {
         duration start, stop, interval;
         std::vector<std::string> rts, trading_days;
         bool is_irts_enabled, is_rts_enabled;
-        static inline std::shared_mutex contract_id_mtx;
-        static inline std::shared_mutex container_mtx;
+        std::vector<uint64_t> flat_map;
         static constexpr contract_t MAX_CONTRACT_ID     = (1 << 16) - 1;
         static constexpr uint64_t SYMBOL_MASK           = ~uint64_t{0xFFFF};  // upper 48 bits
         static constexpr uint64_t CONTRACT_ID_MASK      = 0xFFFF;             // lower 16 bits
@@ -193,7 +176,7 @@ namespace io::hdf5 {
 				ds = h5::open(fd, asset_path);
 				instruments = h5::read<std::vector<std::string>>(fd, asset_path);
 			} else ds = h5::create<std::string>(fd, asset_path, h5::current_dims{0}, h5::max_dims{IEX_MAX_SYMBOLS}, h5::chunk{512}| h5::gzip{9}); 
-			global::state::batch_insert(instruments);
+			batch_insert(instruments);
         }
 
         std::vector<std::string> on_session_begin(std::string start, std::string interval, std::string stop) {
@@ -234,7 +217,7 @@ namespace io::hdf5 {
             uint16_t flags = 
                 (is_bid ? 1 << 0 : 0) | (is_trade ? 1 << 1 : 0) | (is_ask ? 1 << 2 : 0);
             h5::append(irts, iex::tick_t {
-                .time = to_ns(now), .price = price, .size = size, .contract_id = contract, .flags = flags });
+                .time = utils::to_ns(now), .price = price, .size = size, .contract_id = contract, .flags = flags });
         }
         
         void on_trade_report(time_point time, contract_t id, float price, uint32_t size, uint8_t ) {
@@ -313,7 +296,6 @@ namespace io::hdf5 {
         } catch(const h5::error::any& err){
             ERROR << err.what() << std::endl;
         }
-        
 
         void on_session_end(){
 			// condionally update trading days, given there has been RTS data processed
@@ -327,7 +309,7 @@ namespace io::hdf5 {
 				h5::write(ds, active_days, h5::offset{0}, h5::count{active_days.size()});
 			} catch(const h5::error::any& err) {}
 
-			const auto& all_contracts = global::state::flat_map;
+			const auto& all_contracts = flat_map;
 			std::vector<std::string> asset_names(all_contracts.size());
 			TRACE << "instruments: " << all_contracts.size() << std::endl;
 			for(uint64_t contract: all_contracts) {
@@ -339,7 +321,7 @@ namespace io::hdf5 {
 			TRACE << "asset decoding has been completed" << std::endl;
             if (H5Fflush(fd, H5F_SCOPE_GLOBAL) < 0)
                 THROW_RUNTIME_ERROR("hdf5 flush has failed...");
-            if(global::state::flat_map.size() != all_contracts.size()) try {
+            if(flat_map.size() != all_contracts.size()) try {
                 h5::set_extent(ds, h5::current_dims{asset_names.size()});
                 h5::write(fd, asset_path, asset_names, h5::offset{0}, h5::count{asset_names.size()});
             } catch(const h5::error::any& err) {
