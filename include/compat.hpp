@@ -3,29 +3,16 @@
  * Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
  * Contact: info@vargaconsulting.ca */
 
-#pragma once
+ #pragma once
 
-#include <string>
-#include <string_view>
-#include <utility>
-
-#if __has_include(<format>)
-    #include <format>
-    namespace iex::compat {
-        template<typename... Args>
-        std::string format(std::string_view fmt_str, Args&&... args) {
-            return std::vformat(fmt_str, std::make_format_args(std::forward<Args>(args)...));
-        }
-    } 
-#elif __has_include(<fmt/core.h>)
-    #include <fmt/core.h>
-    #include <fmt/chrono.h>
-    namespace iex::compat {
-        template<typename... Args>
-        std::string format(std::string_view fmt_str, Args&&... args) {
-            return fmt::format(fmt_str, std::forward<Args>(args)...);
-        }
-    }
-#else
-    #error "Neither std::format nor fmtlib is available"
-#endif
+ #include <string>
+ #include <string_view>
+ #include <utility>
+ #include <fmt/core.h>
+ #include <fmt/chrono.h>
+ namespace iex::compat {
+     using fmt::format;
+     using fmt::vformat;
+     using fmt::memory_buffer;
+ }
+ 
