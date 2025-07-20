@@ -11,6 +11,8 @@
 #include <ranges>
 #include <string>
 #include <filesystem>
+#include <csignal>
+#include <atomic>
 
 #include <argparse>
 #include <error.hpp>
@@ -26,6 +28,11 @@
 #ifndef IEX_MAX_SYMBOLS
 	#define IEX_MAX_SYMBOLS 1 << 16
 #endif
+void signal_handler(int signal) {
+	INFO << "received signal: " << signal << ", initiating shutdown..." << std::endl;
+	global::state::shutdown_requested.store(true);
+}
+
 using namespace std;
 
 int main(int argc, char **argv) {
@@ -130,6 +137,10 @@ int main(int argc, char **argv) {
 		return 0;
 	}
 
+
+	std::signal(SIGINT, signal_handler); std::signal(SIGTERM, signal_handler);
+	std::signal(SIGHUP, signal_handler); std::signal(SIGQUIT, signal_handler);
+	
 	h5::mute();
     try {
 		std::tie(interval, start, stop, hdf5_path, rts_path, instruments_path, trading_days_path, compression_level, convert) = std::make_tuple(
@@ -177,7 +188,10 @@ int main(int argc, char **argv) {
 			<< "\033[1m[iex2h5]\033[0m Visit \033[4mhttps://vargaconsulting.github.io/iex2h5/\033[0m — Star it, Share it, Support Open Tools ⭐️\n";
 
 			for(std::string path: files) try {
-				io::task<consumer>(path, start, interval, stop, fd, dcpl, rts, is_irts_enabled, is_rts_enabled)();
+				if( !global::state::shutdown_requested.load())
+					io::task<consumer>(path, start, interval, stop, fd, dcpl, rts, is_irts_enabled, is_rts_enabled)();
+			} catch (const global::shutdown_exception& ex) {
+				std::cout << ex.what() << std::endl;
 			} catch (const std::exception& ex) {
 				std::cerr << "[error] task threw exception: " << ex.what() << '\n';
 			} catch (...) {

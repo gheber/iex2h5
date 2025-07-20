@@ -20,8 +20,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <thread>
-#include <shared_mutex>
-
+#include <atomic>
 #include <error.hpp>
 
 #include <generics.hpp>
@@ -43,7 +42,13 @@ namespace {
 namespace global {
     struct state {
         static inline std::vector<uint64_t> flat_map;
+        static inline std::atomic<bool> shutdown_requested = false;
     };
+    struct shutdown_exception : public std::exception {
+        const char* what() const noexcept override {
+            return "graceful shutdown requested";
+        }
+    };    
 }
 
 namespace io::base {
@@ -68,6 +73,7 @@ namespace io::base {
         }
 
         void heart_beat(time_point tp) {
+            if(global::state::shutdown_requested.load())  throw global::shutdown_exception();
             if constexpr (requires(derived d) { d.on_heart_beat(tp); })
                 static_cast<derived*>(this)->on_heart_beat(tp);
         }
@@ -154,8 +160,6 @@ namespace io::base {
         duration start, stop, interval;
         std::vector<std::string> rts, trading_days;
         bool is_irts_enabled, is_rts_enabled;
-        static inline std::shared_mutex contract_id_mtx;
-        static inline std::shared_mutex container_mtx;
         static constexpr contract_t MAX_CONTRACT_ID     = (1 << 16) - 1;
         static constexpr uint64_t SYMBOL_MASK           = ~uint64_t{0xFFFF};  // upper 48 bits
         static constexpr uint64_t CONTRACT_ID_MASK      = 0xFFFF;             // lower 16 bits
