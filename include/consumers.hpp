@@ -156,7 +156,7 @@ namespace io::base {
         h5::fd_t fd;
         contract_t T, I; //< time and instruments
         consumer_t<derived>& contracts;
-        std::string rts_path, asset_path, tradingdays_path;
+        std::string rts_path, asset_path, tradingdays_path, status, clear = "\033[2K\r";
         duration start, stop, interval;
         std::vector<std::string> rts, trading_days;
         bool is_irts_enabled, is_rts_enabled;
@@ -170,7 +170,7 @@ namespace io::rts {
     struct consumer_t : public io::base::consumer_t<consumer_t> {
         using base = io::base::consumer_t<consumer_t>;
         using typename base::clock, typename base::duration, typename base::time_point, typename base::contract_t;
-        using base::fd, base::rts, base::I, base::T, base::contracts;
+        using base::fd, base::rts, base::I, base::T, base::contracts, base::clear, base::status;
         
         consumer_t(h5::fd_t fd, h5::dcpl_t dcpl, std::vector<std::string> rts, bool is_irts_enabled, bool is_rts_enabled)
             : base(fd, rts, is_irts_enabled, is_rts_enabled), dcpl(dcpl) {
@@ -185,19 +185,27 @@ namespace io::rts {
                 avg_trade_count, avg_spread, day_high, day_low, day_close, day_open);
             INFO << "R:" << R << " C:" << C << " slots: "  << max_slot << " " << h5_ask.n_rows << "x" << h5_ask.n_cols << std::endl;            
         }
-        void on_day_begin(time_point day) try {
+        void on_day_begin(time_point day) {
+            auto start_time = std::chrono::floor<std::chrono::seconds>(day);
             generics::zeros(
                 fbid, fask, ftrade,
                 h5_ask, h5_trade, h5_bid,  h5_bid_volume, h5_ask_volume, h5_trade_volume,
                 trade_count, event_count, trade_size, avg_trade_count, avg_spread, day_high, day_low, day_close, slot
             );
-            if(is_irts_enabled) irts = h5::create<iex::tick_t>(fd,
-                "/irts/" + date::format("%F", floor<std::chrono::days>(day)), h5::max_dims{H5S_UNLIMITED}, h5::chunk{64 * 1024} | dcpl);
-        } catch (const h5::error::io::dataset::create& err) {
-            irts = h5::open(fd, "/irts/" + date::format("%F", floor<std::chrono::days>(day)) );
-            h5::reset(irts);
-        } catch (const h5::error::any& err) {
-            ERROR << err.what() << std::endl;
+            try {
+                if(is_irts_enabled) irts = h5::create<iex::tick_t>(fd,
+                    "/irts/" + date::format("%F", floor<std::chrono::days>(day)), h5::max_dims{H5S_UNLIMITED}, h5::chunk{64 * 1024} | dcpl);
+                status = iex::compat::format("▫ {}", start_time);
+                std::cout << status;
+            } catch (const h5::error::io::dataset::create& err) {
+                irts = h5::open(fd, "/irts/" + date::format("%F", floor<std::chrono::days>(day)) );
+                h5::reset(irts);
+                status = iex::compat::format("▪ {}", start_time);
+            } catch (const h5::error::any& err) {
+                ERROR << err.what() << std::endl;
+                status = iex::compat::format("⯑ {}", start_time);
+            }
+            std::cout << status << std::flush;
         }
         void append(time_point now, contract_t contract, float price, uint32_t size, bool is_bid, bool is_trade, bool is_ask) {
             uint16_t flags = 
@@ -228,6 +236,7 @@ namespace io::rts {
         }
         void on_heart_beat(time_point time) {
             auto tp = date::format("%H:%M:%S", date::floor<std::chrono::seconds>(time));
+            std::cout << clear << status << " " << tp << std::flush;
             h5_ask(slot, arma::span::all) = fask.predict(), h5_bid(slot, arma::span::all) = fbid.predict();
             h5_trade(slot, arma::span::all) = ftrade.predict();
             for (arma::uword i = 0; i < I; ++i) {
@@ -273,9 +282,10 @@ namespace io::rts {
             h5::write(fd,"/stats/" + today + "/trade_size", trade_size);
             h5::write(fd,"/stats/" + today + "/event_count", event_count);
             
-            std::cout << today << std::endl;
+            std::cout << " ✓" << std::endl;
         } catch(const h5::error::any& err){
             ERROR << err.what() << std::endl;
+            std::cout << " ✗" << std::endl;
         }
 
         uint64_t slot, max_slot, counter = 0;
