@@ -61,6 +61,7 @@ namespace io::base {
 
         consumer_t(h5::fd_t fd, std::vector<std::string> rts, bool is_irts_enabled, bool is_rts_enabled)
             : fd(fd), T(rts.size()), contracts(*this), rts(rts), is_irts_enabled(is_irts_enabled), is_rts_enabled(is_rts_enabled) {
+            if(!is_rts_enabled) return;
             std::vector<duration> time = utils::string_to_duration<duration>(rts);
             utils::require_uniform_interval(time);
             std::tie(start, interval, stop) = std::make_tuple(time.front(), time[1] - time[0], time.back());
@@ -215,28 +216,33 @@ namespace io::rts {
         }
 
         void on_trade_report(time_point time, contract_t id, float price, uint32_t size, uint8_t ) {
-            h5_trade_volume(slot, id) += size;
+            if(is_rts_enabled)
+                h5_trade_volume(slot, id) += size,
+                ftrade(time, id, price, size);           
+            
             trade_size[id] += size;
             trade_count[id]++;
-            ftrade(time, id, price, size);           
             event_count[id]++;
-            append(time, id, price, size, false, true, false); 
+            if(is_irts_enabled) append(time, id, price, size, false, true, false); 
         }
         void on_ask(time_point time, contract_t id, float price, uint32_t size, uint8_t flag) {
-            h5_ask_volume(slot, id) += size;
-            fask(time, id, price, size);
+            if(is_rts_enabled)
+                h5_ask_volume(slot, id) += size,
+                fask(time, id, price, size);
             event_count[id]++;
-            append(time, id, price, size, false, false, true); 
+            if(is_irts_enabled) append(time, id, price, size, false, false, true); 
         }
         void on_bid(time_point time, contract_t id, float price, uint32_t size, uint8_t flag) {
-            h5_bid_volume(slot, id) += size;
-            fbid(time, id, price, size);
+            if(is_rts_enabled)
+                h5_bid_volume(slot, id) += size,
+                fbid(time, id, price, size);
             event_count[id]++;
-            append(time, id, price, size, true, false, false); 
+            if(is_irts_enabled) append(time, id, price, size, true, false, false); 
         }
         void on_heart_beat(time_point time) {
             auto tp = date::format("%H:%M:%S", date::floor<std::chrono::seconds>(time));
             std::cout << clear << status << " " << tp << std::flush;
+            if(!is_rts_enabled) return;
             h5_ask(slot, arma::span::all) = fask.predict(), h5_bid(slot, arma::span::all) = fbid.predict();
             h5_trade(slot, arma::span::all) = ftrade.predict();
             for (arma::uword i = 0; i < I; ++i) {
