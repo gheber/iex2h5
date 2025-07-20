@@ -28,24 +28,24 @@ namespace test {
             TRACE << tp << std::endl;
         }
         void begin(time_point tp) {
-            INFO << fmt_compat::format("[begin] {}", date::format("%F %T", date::floor<std::chrono::seconds>(tp))) << std::endl;
+            INFO << iex::compat::format("[begin] {}", date::format("%F %T", date::floor<std::chrono::seconds>(tp))) << std::endl;
         }
 
         void end(time_point tp) {
-            INFO << fmt_compat::format("[end] {}",  date::format("%F %T", date::floor<std::chrono::seconds>(tp))) << std::endl;
+            INFO << iex::compat::format("[end] {}",  date::format("%F %T", date::floor<std::chrono::seconds>(tp))) << std::endl;
             for (const auto& [id, data] : trades)
-                INFO << fmt_compat::format("  symbol {:6d}: {} trades, avg price {:.4f}, total size {}",
+                INFO << iex::compat::format("  symbol {:6d}: {} trades, avg price {:.4f}, total size {}",
                     id, data.count, data.total_price / data.total_size, data.total_size) << std::endl;
         }
 
         void day_begin(time_point day) {
-            INFO << fmt_compat::format("[day_begin] {}", date::format("%F %T", date::floor<std::chrono::seconds>(day))) << std::endl;
+            INFO << iex::compat::format("[day_begin] {}", date::format("%F %T", date::floor<std::chrono::seconds>(day))) << std::endl;
             begin(day);
         }
 
         void day_end(time_point day) {
             end(day);
-            INFO << fmt_compat::format("[day_end] {}", date::format("%F %T", date::floor<std::chrono::seconds>(day))) << std::endl;
+            INFO << iex::compat::format("[day_end] {}", date::format("%F %T", date::floor<std::chrono::seconds>(day))) << std::endl;
             std::set<uint64_t> symbols;
             auto aggregate_all = [&symbols](auto&&... map) {
                 (..., [&] {

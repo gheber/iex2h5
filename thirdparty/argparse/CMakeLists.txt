@@ -8,7 +8,7 @@ set(name argparse)
 set(libname lib${name})
 project(${libname} LANGUAGES CXX)
 
-set(current_version_dir "v3.1.0")
+set(current_version_dir "v3.2.0")
 add_library(${libname} INTERFACE)
 target_include_directories(${libname} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/${current_version_dir}/include)
 

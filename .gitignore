@@ -58,3 +58,5 @@ site/
 /.nojekyll
 /*.html
 /*.xml
+
+include/licenses.hpp

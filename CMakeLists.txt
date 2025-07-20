@@ -50,6 +50,7 @@ find_package(ZLIB REQUIRED QUIET)
 find_path(GOOGLE_PROFILER_INCLUDE_DIR NAMES google/profiler.h)
 find_library(GOOGLE_PROFILER_LIBRARY NAMES profiler)
 find_package_handle_standard_args(GoogleProfiler DEFAULT_MSG GOOGLE_PROFILER_INCLUDE_DIR GOOGLE_PROFILER_LIBRARY)
+find_package(Python3 REQUIRED)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 11.4.0)
     add_compile_options(-w)
@@ -103,6 +104,18 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
   add_test_case(producers)
 endif()
 
+## APPLICATION
+# License managenment
+set(LICENSES_INPUT_DIR ${CMAKE_SOURCE_DIR}/docs/licenses)
+set(LICENSES_OUTPUT_FILE ${CMAKE_BINARY_DIR}/include/third_party_licenses.hpp)
+set(LICENSES_PARSER ${CMAKE_SOURCE_DIR}/scripts/licence-parser.py)
+
+add_custom_command(
+    OUTPUT ${LICENSES_OUTPUT_FILE}  COMMAND ${Python3_EXECUTABLE} ${LICENSES_PARSER} DEPENDS ${LICENSES_PARSER}
+    COMMENT "Generating third_party_licenses.hpp from license texts"
+    VERBATIM
+)
+
 file(GLOB_RECURSE all_source_files CONFIGURE_DEPENDS src/*.cpp)
 file(GLOB_RECURSE all_header_files CONFIGURE_DEPENDS src/*.hpp)
 
@@ -118,3 +131,5 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_STRIP} $<TARGET_FILE:${PROJECT_NAME}>
     COMMENT "Stripping symbols from ${PROJECT_NAME} binary"
 )
+add_custom_target(generate_licenses DEPENDS ${LICENSES_OUTPUT_FILE})
+add_dependencies(${PROJECT_NAME} generate_licenses)

@@ -20,8 +20,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <thread>
-#include <shared_mutex>
-
+#include <atomic>
 #include <error.hpp>
 
 #include <generics.hpp>
@@ -31,21 +30,24 @@
 #include <utils.hpp>
 #include <base64.hpp>
 #include <iex.hpp>
-
-namespace {
-    inline uint64_t to_ns(std::chrono::system_clock::time_point tp) {
-        return static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::nanoseconds>(tp.time_since_epoch()).count()
-        );
-    }
-}
-
 namespace global {
+    struct shutdown_exception : public std::exception {
+        const char* what() const noexcept override {
+            return "graceful shutdown requested";
+        }
+    };
     struct state {
-        static inline std::vector<uint64_t> flat_map;
+        static inline std::atomic<bool> shutdown_requested = false;
     };
 }
-
+namespace h5 {
+    template<typename T, class... args_t>
+    inline void write_or_replace(h5::fd_t fd, const std::string& path, const T& data, args_t&&... args) {
+        if (H5Lexists(fd, path.c_str(), H5P_DEFAULT) > 0)
+            H5Ldelete(fd, path.c_str(), H5P_DEFAULT);
+        h5::write(fd, path, data, args...);
+    }
+}
 namespace io::base {
     template <typename derived>
     struct consumer_t {
@@ -54,11 +56,8 @@ namespace io::base {
         using duration    = typename clock::duration;
         using contract_t  = uint16_t;
 
-        consumer_t(h5::fd_t fd, std::vector<std::string> rts, bool is_irts_enabled, bool is_rts_enabled)
-            : fd(fd), T(rts.size()), contracts(*this), rts(rts), is_irts_enabled(is_irts_enabled), is_rts_enabled(is_rts_enabled) {
-            std::vector<duration> time = utils::string_to_duration<duration>(rts);
-            utils::require_uniform_interval(time);
-            std::tie(start, interval, stop) = std::make_tuple(time.front(), time[1] - time[0], time.back());
+        consumer_t(bool is_irts_enabled, bool is_rts_enabled)
+            : contracts(*this), rts(rts), is_irts_enabled(is_irts_enabled), is_rts_enabled(is_rts_enabled) {
         }
 
         void resize(size_t n_time_slots, size_t n_symbols) {
@@ -68,17 +67,19 @@ namespace io::base {
         }
 
         void heart_beat(time_point tp) {
+            if(global::state::shutdown_requested.load())  throw global::shutdown_exception();
             if constexpr (requires(derived d) { d.on_heart_beat(tp); })
                 static_cast<derived*>(this)->on_heart_beat(tp);
         }
         
         void day_begin(time_point day) {
             contract_t n_instruments;
-            n_instruments = global::state::flat_map.size();
+            n_instruments = flat_map.size();
             resize(T, n_instruments);
             if constexpr (requires(derived d) { d.on_day_begin(day); })
                 static_cast<derived*>(this)->on_day_begin(day);    
         }
+
         void day_end(time_point day) {
             if constexpr (requires(derived d) { d.on_day_end(day); })
                 static_cast<derived*>(this)->on_day_end(day);
@@ -87,7 +88,6 @@ namespace io::base {
         void trade_report(time_point time, uint64_t symbol, float price, uint32_t size, uint8_t flag) {
             static_cast<derived*>(this)->on_trade_report(time, contracts[symbol], price, size, flag);
         }
-
         void ask(time_point time, uint64_t symbol, float price, uint32_t size, uint8_t flag) {
             static_cast<derived*>(this)->on_ask(time, contracts[symbol], price, size, flag);
         }
@@ -105,26 +105,7 @@ namespace io::base {
             TRACE << err.what() << " <" << utils::iex_symbol(iex_symbol) << ">" << std::endl;
             return 0;
         }
-        
-        contract_t find_or_insert(uint64_t iex_symbol) {
-            uint64_t base64_encoded_symbol, n_instruments;
-            try {
-                base64_encoded_symbol = utils::base64::encode(iex_symbol, 0);
-            } catch (const std::runtime_error& err){
-                ERROR << err.what() << " |" <<  utils::iex_symbol(iex_symbol) <<"|" << std::endl;
-            }
-            if( auto it = std::ranges::lower_bound(global::state::flat_map, base64_encoded_symbol); it != global::state::flat_map.end()) {
-                if((base64_encoded_symbol & SYMBOL_MASK) == (*it & SYMBOL_MASK))
-                    return *it & CONTRACT_ID_MASK;
-                else global::state::flat_map.insert(it, base64_encoded_symbol | global::state::flat_map.size());
-            } else global::state::flat_map.emplace_back(base64_encoded_symbol | global::state::flat_map.size());
-            n_instruments = global::state::flat_map.size();
-
-            resize(T, n_instruments);
-            return n_instruments - 1;
-        }
-
-        static void batch_insert(std::vector<std::string> instruments) {
+        void batch_insert(std::vector<std::string> instruments) {
             std::ranges::transform(instruments, instruments.begin(), [](const std::string& symbol) {
                 if (symbol.size() > 8) throw std::invalid_argument("Symbol too long: " + symbol);
                 return symbol.size() < 8 ? utils::pad(symbol, 8, ' ') : symbol;
@@ -141,37 +122,91 @@ namespace io::base {
             for (char c : character_table) os << "'" << c << "',";
             TRACE << "size:" << character_table.size() << " {" << buf.str() << "}" << std::endl;
 
-            global::state::flat_map.reserve(global::state::flat_map.size() + instruments.size());
+            flat_map.reserve(flat_map.size() + instruments.size());
             for (const std::string& symbol : instruments)
-                global::state::flat_map.emplace_back( utils::base64::encode(symbol, global::state::flat_map.size()));
-            std::ranges::sort(global::state::flat_map);
+                flat_map.emplace_back( utils::base64::encode(symbol, flat_map.size()));
+            std::ranges::sort(flat_map);
+        }        
+        contract_t find_or_insert(uint64_t iex_symbol) {
+            uint64_t base64_encoded_symbol, n_instruments;
+            try {
+                base64_encoded_symbol = utils::base64::encode(iex_symbol, 0);
+            } catch (const std::runtime_error& err){
+                ERROR << err.what() << " |" <<  utils::iex_symbol(iex_symbol) <<"|" << std::endl;
+            }
+            if( auto it = std::ranges::lower_bound(flat_map, base64_encoded_symbol); it != flat_map.end()) {
+                if((base64_encoded_symbol & SYMBOL_MASK) == (*it & SYMBOL_MASK))
+                    return *it & CONTRACT_ID_MASK;
+                else flat_map.insert(it, base64_encoded_symbol | flat_map.size());
+            } else flat_map.emplace_back(base64_encoded_symbol | flat_map.size());
+            n_instruments = flat_map.size();
+
+            resize(T, n_instruments);
+            return n_instruments - 1;
         }
-    
-        h5::fd_t fd;
+        
+        void session_begin(std::string start, std::string interval, std::string stop) {
+            if constexpr (requires(derived d) {
+                { d.on_session_begin(start, interval, stop) } -> std::same_as<std::vector<duration>>;
+            }) {
+                rts = static_cast<derived*>(this)->on_session_begin(start, interval, stop);
+            } else rts = utils::sequence<std::chrono::seconds>(start, interval, stop);
+            T = rts.size();
+        }
+        void session_end(){
+            if constexpr (requires(derived d) { d.on_session_end(); })
+                static_cast<derived*>(this)->on_session_end();            
+        }
+
         contract_t T, I; //< time and instruments
         consumer_t<derived>& contracts;
-        std::string rts_path, asset_path, tradingdays_path;
+        std::string status, clear = "\033[2K\r";
         duration start, stop, interval;
         std::vector<std::string> rts, trading_days;
         bool is_irts_enabled, is_rts_enabled;
-        static inline std::shared_mutex contract_id_mtx;
-        static inline std::shared_mutex container_mtx;
+        std::vector<uint64_t> flat_map;
         static constexpr contract_t MAX_CONTRACT_ID     = (1 << 16) - 1;
         static constexpr uint64_t SYMBOL_MASK           = ~uint64_t{0xFFFF};  // upper 48 bits
         static constexpr uint64_t CONTRACT_ID_MASK      = 0xFFFF;             // lower 16 bits
     };
 } // namespace io::base
 
-namespace io::rts {
+namespace io::hdf5 {
     struct consumer_t : public io::base::consumer_t<consumer_t> {
         using base = io::base::consumer_t<consumer_t>;
         using typename base::clock, typename base::duration, typename base::time_point, typename base::contract_t;
-        using base::fd, base::rts, base::I, base::T, base::contracts;
-        
-        consumer_t(h5::fd_t fd, h5::dcpl_t dcpl, std::vector<std::string> rts, bool is_irts_enabled, bool is_rts_enabled)
-            : base(fd, rts, is_irts_enabled, is_rts_enabled), dcpl(dcpl) {
-            INFO << "starting consumer... " << std::hex << this << std::dec <<  std::endl;
+        using base::I, base::T, base::contracts, base::rts;
+
+        consumer_t(std::string path, std::string rts_path, std::string asset_path, std::string trading_days_path,
+            bool is_irts_enabled, bool is_rts_enabled, uint8_t compression_level) : base(is_irts_enabled, is_rts_enabled),
+            rts_path(rts_path), asset_path(asset_path), tradingdays_path(trading_days_path) {
+            namespace fs = std::filesystem;
+            namespace ch = std::chrono;
+            
+			dcpl = (compression_level != 0) ?  h5::gzip{compression_level} : h5::default_dcpl;
+			try {
+				fd = h5::open(path, H5F_ACC_RDWR);
+			} catch (const h5::error::any& err){
+				fd = h5::create(path, H5F_ACC_TRUNC);
+			}
+			std::vector<std::string> instruments;
+			if (H5Lexists(fd, asset_path.data(), H5P_DEFAULT) > 0) {
+				ds = h5::open(fd, asset_path);
+				instruments = h5::read<std::vector<std::string>>(fd, asset_path);
+			} else ds = h5::create<std::string>(fd, asset_path, h5::current_dims{0}, h5::max_dims{IEX_MAX_SYMBOLS}, h5::chunk{512}| h5::gzip{9}); 
+			
+            if(!instruments.empty()) batch_insert(instruments);
         }
+
+        std::vector<std::string> on_session_begin(std::string start, std::string interval, std::string stop) {
+            if(! is_rts_enabled) return {};
+
+            h5::ds_t ds = H5Lexists(fd, rts_path.data(), H5P_DEFAULT) <= 0
+                ? h5::write(fd, rts_path, utils::sequence<std::chrono::seconds>(start, interval, stop))
+                : h5::open(fd, rts_path);
+            return h5::read<std::vector<std::string>>(ds);
+        }
+
         void on_resize(size_t R, size_t C) { //n_rows, n_cols
             max_slot = R;
             generics::resize(R,C, h5_bid,h5_ask,h5_trade,  h5_bid_volume, h5_ask_volume, h5_trade_volume);
@@ -181,49 +216,64 @@ namespace io::rts {
                 avg_trade_count, avg_spread, day_high, day_low, day_close, day_open);
             INFO << "R:" << R << " C:" << C << " slots: "  << max_slot << " " << h5_ask.n_rows << "x" << h5_ask.n_cols << std::endl;            
         }
-        void on_day_begin(time_point day) try {
+        void on_day_begin(time_point day) {
+            auto start_time = std::chrono::floor<std::chrono::seconds>(day);
             generics::zeros(
                 fbid, fask, ftrade,
                 h5_ask, h5_trade, h5_bid,  h5_bid_volume, h5_ask_volume, h5_trade_volume,
                 trade_count, event_count, trade_size, avg_trade_count, avg_spread, day_high, day_low, day_close, slot
             );
-            if(is_irts_enabled) irts = h5::create<iex::tick_t>(fd,
-                "/irts/" + date::format("%F", floor<std::chrono::days>(day)), h5::max_dims{H5S_UNLIMITED}, h5::chunk{64 * 1024} | dcpl);
-        } catch (const h5::error::io::dataset::create& err) {
-            irts = h5::open(fd, "/irts/" + date::format("%F", floor<std::chrono::days>(day)) );
-            h5::reset(irts);
-        } catch (const h5::error::any& err) {
-            ERROR << err.what() << std::endl;
+            try {
+                if(is_irts_enabled) irts = h5::create<iex::tick_t>(fd,
+                    "/irts/" + date::format("%F", floor<std::chrono::days>(day)), h5::max_dims{H5S_UNLIMITED}, h5::chunk{64 * 1024} | dcpl);
+                status = iex::compat::format("▫ {}", start_time);
+                std::cout << status;
+            } catch (const h5::error::io::dataset::create& err) {
+                irts = h5::open(fd, "/irts/" + date::format("%F", floor<std::chrono::days>(day)) );
+                h5::reset(irts);
+                status = iex::compat::format("▪ {}", start_time);
+            } catch (const h5::error::any& err) {
+                ERROR << err.what() << std::endl;
+                status = iex::compat::format("⯑ {}", start_time);
+            }
+            std::cout << status << std::flush;
         }
         void append(time_point now, contract_t contract, float price, uint32_t size, bool is_bid, bool is_trade, bool is_ask) {
             uint16_t flags = 
                 (is_bid ? 1 << 0 : 0) | (is_trade ? 1 << 1 : 0) | (is_ask ? 1 << 2 : 0);
             h5::append(irts, iex::tick_t {
-                .time = to_ns(now), .price = price, .size = size, .contract_id = contract, .flags = flags });
+                .time = utils::to_ns(now), .price = price, .size = size, .contract_id = contract, .flags = flags });
         }
-
+        
         void on_trade_report(time_point time, contract_t id, float price, uint32_t size, uint8_t ) {
-            h5_trade_volume(slot, id) += size;
+            if(is_rts_enabled)
+                h5_trade_volume(slot, id) += size,
+                ftrade(time, id, price, size);           
+            
             trade_size[id] += size;
             trade_count[id]++;
-            ftrade(time, id, price, size);           
             event_count[id]++;
-            append(time, id, price, size, false, true, false); 
+            if(is_irts_enabled) append(time, id, price, size, false, true, false); 
         }
+
         void on_ask(time_point time, contract_t id, float price, uint32_t size, uint8_t flag) {
-            h5_ask_volume(slot, id) += size;
-            fask(time, id, price, size);
+            if(is_rts_enabled)
+                h5_ask_volume(slot, id) += size,
+                fask(time, id, price, size);
             event_count[id]++;
-            append(time, id, price, size, false, false, true); 
+            if(is_irts_enabled) append(time, id, price, size, false, false, true); 
         }
         void on_bid(time_point time, contract_t id, float price, uint32_t size, uint8_t flag) {
-            h5_bid_volume(slot, id) += size;
-            fbid(time, id, price, size);
+            if(is_rts_enabled)
+                h5_bid_volume(slot, id) += size,
+                fbid(time, id, price, size);
             event_count[id]++;
-            append(time, id, price, size, true, false, false); 
+            if(is_irts_enabled) append(time, id, price, size, true, false, false); 
         }
         void on_heart_beat(time_point time) {
             auto tp = date::format("%H:%M:%S", date::floor<std::chrono::seconds>(time));
+            std::cout << clear << status << " " << tp << std::flush;
+            if(!is_rts_enabled) return;
             h5_ask(slot, arma::span::all) = fask.predict(), h5_bid(slot, arma::span::all) = fbid.predict();
             h5_trade(slot, arma::span::all) = ftrade.predict();
             for (arma::uword i = 0; i < I; ++i) {
@@ -251,33 +301,69 @@ namespace io::rts {
                     if(stop[i].empty()) stop[i] = rts.back(); 
                 }
                 
-                h5::write(fd,"/stats/" + today + "/avg_trade_count", avg_trade_count);
-                h5::write(fd,"/stats/" + today + "/first_trade", start);
-                h5::write(fd,"/stats/" + today + "/last_trade", stop);
+                h5::write_or_replace(fd,"/stats/" + today + "/avg_trade_count", avg_trade_count);
+                h5::write_or_replace(fd,"/stats/" + today + "/first_trade", start);
+                h5::write_or_replace(fd,"/stats/" + today + "/last_trade", stop);
 
                 generics::round<VALUE_PRECISION>(h5_ask, h5_trade, h5_bid, avg_trade_count);
                 generics::zeros2nans(h5_ask, h5_trade, h5_bid);
 
                 h5::dcpl_t all_dcpl =  h5::chunk{64,T} | dcpl;
-                h5::write(fd,"/rts/ask/"	+ today, h5_ask,          h5::max_dims{H5S_UNLIMITED, T}, all_dcpl);
-                h5::write(fd,"/rts/bid/"	+ today, h5_bid,          h5::max_dims{H5S_UNLIMITED, T}, all_dcpl);
-                h5::write(fd,"/rts/trade/"  + today, h5_trade,        h5::max_dims{H5S_UNLIMITED, T}, all_dcpl);
-                h5::write(fd,"/rts/volume/" + today, h5_trade_volume, h5::max_dims{H5S_UNLIMITED, T}, all_dcpl);
+                h5::write_or_replace(fd,"/rts/ask/"	+ today, h5_ask,          h5::max_dims{H5S_UNLIMITED, T}, all_dcpl);
+                h5::write_or_replace(fd,"/rts/bid/"	+ today, h5_bid,          h5::max_dims{H5S_UNLIMITED, T}, all_dcpl);
+                h5::write_or_replace(fd,"/rts/trade/"  + today, h5_trade,        h5::max_dims{H5S_UNLIMITED, T}, all_dcpl);
+                h5::write_or_replace(fd,"/rts/volume/" + today, h5_trade_volume, h5::max_dims{H5S_UNLIMITED, T}, all_dcpl);
             }
             
-            h5::write(fd,"/stats/" + today + "/trade_count", trade_count);
-            h5::write(fd,"/stats/" + today + "/trade_size", trade_size);
-            h5::write(fd,"/stats/" + today + "/event_count", event_count);
+            h5::write_or_replace(fd,"/stats/" + today + "/trade_count", trade_count);
+            h5::write_or_replace(fd,"/stats/" + today + "/trade_size", trade_size);
+            h5::write_or_replace(fd,"/stats/" + today + "/event_count", event_count);
             
-            std::cout << today << std::endl;
+            std::cout << " ✓" << std::endl;
         } catch(const h5::error::any& err){
             ERROR << err.what() << std::endl;
+            std::cout << " ✗" << std::endl;
+        }
+
+        void on_session_end(){
+			// condionally update trading days, given there has been RTS data processed
+			if ( H5Lexists(fd, "stats", H5P_DEFAULT) > 0) try {
+				std::vector<std::string> active_days = h5::ls(fd, "stats");
+				h5::ds_t ds;
+				if (H5Lexists(fd, tradingdays_path.data(), H5P_DEFAULT) > 0)
+					ds = h5::open(fd, tradingdays_path);
+				else ds = h5::create<std::string>(fd, tradingdays_path, h5::current_dims{0}, h5::max_dims{H5S_UNLIMITED}, h5::chunk{512}| h5::gzip{9});
+				h5::set_extent(ds, h5::current_dims{active_days.size()});
+				h5::write(ds, active_days, h5::offset{0}, h5::count{active_days.size()});
+			} catch(const h5::error::any& err) {}
+
+			const auto& all_contracts = flat_map;
+			std::vector<std::string> asset_names(all_contracts.size());
+			TRACE << "instruments: " << all_contracts.size() << std::endl;
+			for(uint64_t contract: all_contracts) {
+				auto[symbol, index] = utils::base64::decode(contract);
+				if(index >= asset_names.size())
+					throw std::runtime_error("Decoded index out of bounds.");
+				asset_names[index] = utils::trim(symbol);
+			}
+			TRACE << "asset decoding has been completed" << std::endl;
+            if (H5Fflush(fd, H5F_SCOPE_GLOBAL) < 0)
+                THROW_RUNTIME_ERROR("hdf5 flush has failed...");
+            if(flat_map.size() != all_contracts.size()) try {
+                h5::set_extent(ds, h5::current_dims{asset_names.size()});
+                h5::write(fd, asset_path, asset_names, h5::offset{0}, h5::count{asset_names.size()});
+            } catch(const h5::error::any& err) {
+                ERROR << err.what() << std::endl;
+            } else INFO << "symbol/contract table has not changed, total: " << all_contracts.size() << std::endl;
         }
 
         uint64_t slot, max_slot, counter = 0;
     private:
-        h5::pt_t irts;
+        std::string rts_path, asset_path, tradingdays_path;
+        h5::fd_t fd;
+        h5::ds_t ds;
         h5::dcpl_t dcpl;
+        h5::pt_t irts;
         time_point last_time, today;
         arma::fmat h5_bid, h5_ask, h5_trade;
         arma::umat h5_bid_volume, h5_ask_volume, h5_trade_volume;

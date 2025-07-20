@@ -21,11 +21,18 @@
 #include <regex>
 #include <type_traits>
 #include <unordered_set>
-
-
+#include <fstream>
+#include <algorithm>
+#include <cctype>
 namespace utils {
 	namespace ch = std::chrono;
     
+    inline uint64_t to_ns(std::chrono::system_clock::time_point tp) {
+        return static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(tp.time_since_epoch()).count()
+        );
+    }
+
     inline std::string iex_symbol(uint64_t iex_symbol) {
         return std::string(reinterpret_cast<const char*>(&iex_symbol), 8);
     }
@@ -210,7 +217,7 @@ namespace utils {
         }
     
         return files;
-    }    
+    }
 } // namespace util
 
 namespace utils::pcap {
@@ -437,3 +444,52 @@ namespace utils {
         return std::chrono::seconds(remaining_seconds);
     }
 } // namespace utils
+
+
+namespace file {
+    std::string detect_format(const std::string& path) {
+        namespace fs = std::filesystem;
+        using namespace std::literals;
+    
+        if (fs::exists(path)) {
+            std::ifstream file(path, std::ios::binary);
+            if (!file)
+                throw std::runtime_error("Failed to open file: " + path);
+    
+            char magic[8] = {};
+            file.read(magic, sizeof(magic));
+    
+            // HDF5 magic (8 bytes): "\211HDF\r\n\032\n"
+            if (std::memcmp(magic, "\211HDF\r\n\032\n", 8) == 0) return "hdf5";
+    
+            // GZip magic: 1F 8B
+            if ((uint8_t)magic[0] == 0x1F && (uint8_t)magic[1] == 0x8B) {
+                std::string ext = utils::to_lower(fs::path(path).extension().string());
+                if (ext.ends_with(".gz") || ext.ends_with(".gzip"))
+                    return "csv.gz"; // could refine further
+            }
+    
+            // crude CSV sniff
+            std::string line;
+            file.seekg(0);
+            if (std::getline(file, line)) {
+                if (line.find(',') != std::string::npos) return "csv";
+                if (line.find('\t') != std::string::npos) return "tsv";
+            }
+        }
+    
+        // file doesn't exist or fallback
+        const std::string ext = utils::to_lower(fs::path(path).extension().string());
+    
+        if (ext == ".h5" || ext == ".hdf5") return "hdf5";
+        if (ext == ".csv") return "csv";
+        if (ext == ".tsv") return "tsv";
+        if (ext == ".json") return "json";
+    
+        // URL schemes (for Redis/MySQL/etc.)
+        if (path.starts_with("redis://")) return "redis";
+        if (path.starts_with("mysql://")) return "mysql";
+    
+        throw std::runtime_error("Unable to detect format: " + path);
+    }    
+}

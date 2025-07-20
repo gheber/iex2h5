@@ -57,6 +57,7 @@ SOFTWARE.
 #include <utility>
 #include <variant>
 #include <vector>
+#include <filesystem>
 #endif
 
 #ifndef ARGPARSE_CUSTOM_STRTOF
@@ -550,7 +551,7 @@ std::size_t get_levenshtein_distance(const StringType &s1,
       } else if (s1[i - 1] == s2[j - 1]) {
         dp[i][j] = dp[i - 1][j - 1];
       } else {
-        dp[i][j] = 1 + std::min({dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]});
+        dp[i][j] = 1 + std::min<std::size_t>({dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]});
       }
     }
   }
@@ -562,7 +563,7 @@ template <typename ValueType>
 std::string get_most_similar_string(const std::map<std::string, ValueType> &map,
                                     const std::string &input) {
   std::string most_similar{};
-  std::size_t min_distance = std::numeric_limits<std::size_t>::max();
+  std::size_t min_distance = (std::numeric_limits<std::size_t>::max)();
 
   for (const auto &entry : map) {
     std::size_t distance = get_levenshtein_distance(entry.first, input);
@@ -678,9 +679,9 @@ public:
         std::is_void_v<std::invoke_result_t<F, Args..., std::string const>>,
         void_action, valued_action>;
     if constexpr (sizeof...(Args) == 0) {
-      m_action.emplace<action_type>(std::forward<F>(callable));
+      m_actions.emplace_back<action_type>(std::forward<F>(callable));
     } else {
-      m_action.emplace<action_type>(
+      m_actions.emplace_back<action_type>(
           [f = std::forward<F>(callable),
            tup = std::make_tuple(std::forward<Args>(bound_args)...)](
               std::string const &opt) mutable {
@@ -691,11 +692,16 @@ public:
   }
 
   auto &store_into(bool &var) {
-    flag();
+    if ((!m_default_value.has_value()) && (!m_implicit_value.has_value())) {
+      flag();
+    }
     if (m_default_value.has_value()) {
       var = std::any_cast<bool>(m_default_value);
     }
-    action([&var](const auto & /*unused*/) { var = true; });
+    action([&var](const auto & /*unused*/) {
+      var = true;
+      return var;
+    });
     return *this;
   }
 
@@ -706,6 +712,7 @@ public:
     }
     action([&var](const auto &s) {
       var = details::parse_number<T, details::radix_10>()(s);
+      return var;
     });
     return *this;
   }
@@ -716,6 +723,7 @@ public:
     }
     action([&var](const auto &s) {
       var = details::parse_number<double, details::chars_format::general>()(s);
+      return var;
     });
     return *this;
   }
@@ -723,6 +731,17 @@ public:
   auto &store_into(std::string &var) {
     if (m_default_value.has_value()) {
       var = std::any_cast<std::string>(m_default_value);
+    }
+    action([&var](const std::string &s) {
+      var = s;
+      return var;
+    });
+    return *this;
+  }
+
+  auto &store_into(std::filesystem::path &var) {
+    if (m_default_value.has_value()) {
+      var = std::any_cast<std::filesystem::path>(m_default_value);
     }
     action([&var](const std::string &s) { var = s; });
     return *this;
@@ -738,6 +757,7 @@ public:
       }
       m_is_used = true;
       var.push_back(s);
+      return var;
     });
     return *this;
   }
@@ -752,6 +772,7 @@ public:
       }
       m_is_used = true;
       var.push_back(details::parse_number<int, details::radix_10>()(s));
+      return var;
     });
     return *this;
   }
@@ -766,6 +787,7 @@ public:
       }
       m_is_used = true;
       var.insert(s);
+      return var;
     });
     return *this;
   }
@@ -780,6 +802,7 @@ public:
       }
       m_is_used = true;
       var.insert(details::parse_number<int, details::radix_10>()(s));
+      return var;
     });
     return *this;
   }
@@ -927,24 +950,26 @@ public:
   }
 
   template <typename Iterator>
-  void find_value_in_choices_or_throw(Iterator it) const {
+  bool is_value_in_choices(Iterator option_it) const {
 
     const auto &choices = m_choices.value();
 
-    if (std::find(choices.begin(), choices.end(), *it) == choices.end()) {
-      // provided arg not in list of allowed choices
-      // report error
+    return (std::find(choices.begin(), choices.end(), *option_it) !=
+            choices.end());
+  }
 
-      std::string choices_as_csv =
-          std::accumulate(choices.begin(), choices.end(), std::string(),
-                          [](const std::string &a, const std::string &b) {
-                            return a + (a.empty() ? "" : ", ") + b;
-                          });
+  template <typename Iterator>
+  void throw_invalid_arguments_error(Iterator option_it) const {
+    const auto &choices = m_choices.value();
+    const std::string choices_as_csv = std::accumulate(
+        choices.begin(), choices.end(), std::string(),
+        [](const std::string &option_a, const std::string &option_b) {
+          return option_a + (option_a.empty() ? "" : ", ") + option_b;
+        });
 
-      throw std::runtime_error(std::string{"Invalid argument "} +
-                               details::repr(*it) + " - allowed options: {" +
-                               choices_as_csv + "}");
-    }
+    throw std::runtime_error(std::string{"Invalid argument "} +
+                             details::repr(*option_it) +
+                             " - allowed options: {" + choices_as_csv + "}");
   }
 
   /* The dry_run parameter can be set to true to avoid running the actions,
@@ -960,27 +985,41 @@ public:
     }
     m_used_name = used_name;
 
+    std::size_t passed_options = 0;
+
     if (m_choices.has_value()) {
       // Check each value in (start, end) and make sure
       // it is in the list of allowed choices/options
-      std::size_t i = 0;
-      auto max_number_of_args = m_num_args_range.get_max();
+      const auto max_number_of_args = m_num_args_range.get_max();
+      const auto min_number_of_args = m_num_args_range.get_min();
       for (auto it = start; it != end; ++it) {
-        if (i == max_number_of_args) {
+        if (is_value_in_choices(it)) {
+          passed_options += 1;
+          continue;
+        }
+
+        if ((passed_options >= min_number_of_args) &&
+            (passed_options <= max_number_of_args)) {
           break;
         }
-        find_value_in_choices_or_throw(it);
-        i += 1;
+
+        throw_invalid_arguments_error(it);
       }
     }
 
-    const auto num_args_max = m_num_args_range.get_max();
+    const auto num_args_max =
+        (m_choices.has_value()) ? passed_options : m_num_args_range.get_max();
     const auto num_args_min = m_num_args_range.get_min();
     std::size_t dist = 0;
     if (num_args_max == 0) {
       if (!dry_run) {
         m_values.emplace_back(m_implicit_value);
-        std::visit([](const auto &f) { f({}); }, m_action);
+        for(auto &action: m_actions) {
+          std::visit([&](const auto &f) { f({}); }, action);
+        }
+        if(m_actions.empty()){
+          std::visit([&](const auto &f) { f({}); }, m_default_action);
+        }
         m_is_used = true;
       }
       return start;
@@ -1001,7 +1040,6 @@ public:
                                    std::string(m_used_name) + "'.");
         }
       }
-
       struct ActionApply {
         void operator()(valued_action &f) {
           std::transform(first, last, std::back_inserter(self.m_values), f);
@@ -1021,7 +1059,12 @@ public:
         Argument &self;
       };
       if (!dry_run) {
-        std::visit(ActionApply{start, end, *this}, m_action);
+        for(auto &action: m_actions) {
+          std::visit(ActionApply{start, end, *this}, action);
+        }
+        if(m_actions.empty()){
+          std::visit(ActionApply{start, end, *this}, m_default_action);
+        }
         m_is_used = true;
       }
       return end;
@@ -1571,9 +1614,10 @@ private:
   std::optional<std::vector<std::string>> m_choices{std::nullopt};
   using valued_action = std::function<std::any(const std::string &)>;
   using void_action = std::function<void(const std::string &)>;
-  std::variant<valued_action, void_action> m_action{
-      std::in_place_type<valued_action>,
-      [](const std::string &value) { return value; }};
+  std::vector<std::variant<valued_action, void_action>> m_actions;
+  std::variant<valued_action, void_action> m_default_action{
+    std::in_place_type<valued_action>,
+    [](const std::string &value) { return value; }};
   std::vector<std::any> m_values;
   NArgsRange m_num_args_range{1, 1};
   // Bit field of bool values. Set default value in ctor.
@@ -2055,9 +2099,9 @@ public:
     std::stringstream stream;
 
     std::string curline("Usage: ");
-    curline += this->m_program_name;
+    curline += this->m_parser_path;
     const bool multiline_usage =
-        this->m_usage_max_line_width < std::numeric_limits<std::size_t>::max();
+        this->m_usage_max_line_width < (std::numeric_limits<std::size_t>::max)();
     const size_t indent_size = curline.size();
 
     const auto deal_with_options_of_group = [&](std::size_t group_idx) {
@@ -2116,7 +2160,8 @@ public:
           }
         }
         cur_mutex = arg_mutex;
-        if (curline.size() + 1 + arg_inline_usage.size() >
+        if (curline.size() != indent_size &&
+            curline.size() + 1 + arg_inline_usage.size() >
             this->m_usage_max_line_width) {
           stream << curline << std::endl;
           curline = std::string(indent_size, ' ');
@@ -2244,7 +2289,7 @@ protected:
   preprocess_arguments(const std::vector<std::string> &raw_arguments) const {
     std::vector<std::string> arguments{};
     for (const auto &arg : raw_arguments) {
-
+      
       const auto argument_starts_with_prefix_chars =
           [this](const std::string &a) -> bool {
         if (!a.empty()) {
@@ -2534,7 +2579,7 @@ protected:
   std::map<std::string, bool> m_subparser_used;
   std::vector<MutuallyExclusiveGroup> m_mutually_exclusive_groups;
   bool m_suppress = false;
-  std::size_t m_usage_max_line_width = std::numeric_limits<std::size_t>::max();
+  std::size_t m_usage_max_line_width = (std::numeric_limits<std::size_t>::max)();
   bool m_usage_break_on_mutex = false;
   int m_usage_newline_counter = 0;
   std::vector<std::string> m_group_names;
