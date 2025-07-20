@@ -50,7 +50,14 @@ namespace global {
         }
     };    
 }
-
+namespace h5 {
+    template<typename T, class... args_t>
+    inline void write_or_replace(h5::fd_t fd, const std::string& path, const T& data, args_t&&... args) {
+        if (H5Lexists(fd, path.c_str(), H5P_DEFAULT) > 0)
+            H5Ldelete(fd, path.c_str(), H5P_DEFAULT);
+        h5::write(fd, path, data, args...);
+    }
+}
 namespace io::base {
     template <typename derived>
     struct consumer_t {
@@ -270,23 +277,23 @@ namespace io::rts {
                     if(stop[i].empty()) stop[i] = rts.back(); 
                 }
                 
-                h5::write(fd,"/stats/" + today + "/avg_trade_count", avg_trade_count);
-                h5::write(fd,"/stats/" + today + "/first_trade", start);
-                h5::write(fd,"/stats/" + today + "/last_trade", stop);
+                h5::write_or_replace(fd,"/stats/" + today + "/avg_trade_count", avg_trade_count);
+                h5::write_or_replace(fd,"/stats/" + today + "/first_trade", start);
+                h5::write_or_replace(fd,"/stats/" + today + "/last_trade", stop);
 
                 generics::round<VALUE_PRECISION>(h5_ask, h5_trade, h5_bid, avg_trade_count);
                 generics::zeros2nans(h5_ask, h5_trade, h5_bid);
 
                 h5::dcpl_t all_dcpl =  h5::chunk{64,T} | dcpl;
-                h5::write(fd,"/rts/ask/"	+ today, h5_ask,          h5::max_dims{H5S_UNLIMITED, T}, all_dcpl);
-                h5::write(fd,"/rts/bid/"	+ today, h5_bid,          h5::max_dims{H5S_UNLIMITED, T}, all_dcpl);
-                h5::write(fd,"/rts/trade/"  + today, h5_trade,        h5::max_dims{H5S_UNLIMITED, T}, all_dcpl);
-                h5::write(fd,"/rts/volume/" + today, h5_trade_volume, h5::max_dims{H5S_UNLIMITED, T}, all_dcpl);
+                h5::write_or_replace(fd,"/rts/ask/"	+ today, h5_ask,          h5::max_dims{H5S_UNLIMITED, T}, all_dcpl);
+                h5::write_or_replace(fd,"/rts/bid/"	+ today, h5_bid,          h5::max_dims{H5S_UNLIMITED, T}, all_dcpl);
+                h5::write_or_replace(fd,"/rts/trade/"  + today, h5_trade,        h5::max_dims{H5S_UNLIMITED, T}, all_dcpl);
+                h5::write_or_replace(fd,"/rts/volume/" + today, h5_trade_volume, h5::max_dims{H5S_UNLIMITED, T}, all_dcpl);
             }
             
-            h5::write(fd,"/stats/" + today + "/trade_count", trade_count);
-            h5::write(fd,"/stats/" + today + "/trade_size", trade_size);
-            h5::write(fd,"/stats/" + today + "/event_count", event_count);
+            h5::write_or_replace(fd,"/stats/" + today + "/trade_count", trade_count);
+            h5::write_or_replace(fd,"/stats/" + today + "/trade_size", trade_size);
+            h5::write_or_replace(fd,"/stats/" + today + "/event_count", event_count);
             
             std::cout << " ✓" << std::endl;
         } catch(const h5::error::any& err){
