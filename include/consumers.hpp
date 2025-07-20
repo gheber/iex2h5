@@ -76,11 +76,8 @@ namespace io::base {
         using duration    = typename clock::duration;
         using contract_t  = uint16_t;
 
-        consumer_t(std::vector<std::string> rts, bool is_irts_enabled, bool is_rts_enabled)
-            : T(rts.size()), contracts(*this), rts(rts), is_irts_enabled(is_irts_enabled), is_rts_enabled(is_rts_enabled) {
-            std::vector<duration> time = utils::string_to_duration<duration>(rts);
-            utils::require_uniform_interval(time);
-            std::tie(start, interval, stop) = std::make_tuple(time.front(), time[1] - time[0], time.back());
+        consumer_t(bool is_irts_enabled, bool is_rts_enabled)
+            : contracts(*this), rts(rts), is_irts_enabled(is_irts_enabled), is_rts_enabled(is_rts_enabled) {
         }
 
         void resize(size_t n_time_slots, size_t n_symbols) {
@@ -101,6 +98,7 @@ namespace io::base {
             if constexpr (requires(derived d) { d.on_day_begin(day); })
                 static_cast<derived*>(this)->on_day_begin(day);    
         }
+
         void day_end(time_point day) {
             if constexpr (requires(derived d) { d.on_day_end(day); })
                 static_cast<derived*>(this)->on_day_end(day);
@@ -145,6 +143,19 @@ namespace io::base {
             resize(T, n_instruments);
             return n_instruments - 1;
         }
+        
+        void session_begin(std::string start, std::string interval, std::string stop) {
+            if constexpr (requires(derived d) {
+                { d.on_session_begin(start, interval, stop) } -> std::same_as<std::vector<duration>>;
+            }) {
+                rts = static_cast<derived*>(this)->on_session_begin(start, interval, stop);
+            } else rts = utils::sequence<std::chrono::seconds>(start, interval, stop);
+            T = rts.size();
+        }
+        void session_end(){
+            if constexpr (requires(derived d) { d.on_session_end(); })
+                static_cast<derived*>(this)->on_session_end();            
+        }
 
         contract_t T, I; //< time and instruments
         consumer_t<derived>& contracts;
@@ -163,12 +174,39 @@ namespace io::hdf5 {
     struct consumer_t : public io::base::consumer_t<consumer_t> {
         using base = io::base::consumer_t<consumer_t>;
         using typename base::clock, typename base::duration, typename base::time_point, typename base::contract_t;
-        using base::rts, base::I, base::T, base::contracts;
-        
-        consumer_t(h5::fd_t fd, h5::dcpl_t dcpl, std::vector<std::string> rts, bool is_irts_enabled, bool is_rts_enabled)
-            : base(rts, is_irts_enabled, is_rts_enabled), fd(fd), dcpl(dcpl) {
-            INFO << "starting consumer... " << std::hex << this << std::dec <<  std::endl;
+        using base::I, base::T, base::contracts, base::rts;
+
+        consumer_t(std::string path, std::string rts_path, std::string asset_path, std::string trading_days_path,
+            bool is_irts_enabled, bool is_rts_enabled, uint8_t compression_level) : base(is_irts_enabled, is_rts_enabled),
+            rts_path(rts_path), asset_path(asset_path), tradingdays_path(trading_days_path) {
+            namespace fs = std::filesystem;
+            namespace ch = std::chrono;
+            
+			dcpl = (compression_level != 0) ?  h5::gzip{compression_level} : h5::default_dcpl;
+			try {
+				fd = h5::open(path, H5F_ACC_RDWR);
+			} catch (const h5::error::any& err){
+				fd = h5::create(path, H5F_ACC_TRUNC);
+			}
+			std::vector<std::string> instruments;
+			if (H5Lexists(fd, asset_path.data(), H5P_DEFAULT) > 0) {
+				ds = h5::open(fd, asset_path);
+				instruments = h5::read<std::vector<std::string>>(fd, asset_path);
+			} else ds = h5::create<std::string>(fd, asset_path, h5::current_dims{0}, h5::max_dims{IEX_MAX_SYMBOLS}, h5::chunk{512}| h5::gzip{9}); 
+			global::state::batch_insert(instruments);
         }
+
+        std::vector<std::string> on_session_begin(std::string start, std::string interval, std::string stop) {
+            if(! is_rts_enabled) return {};
+
+            h5::ds_t ds = H5Lexists(fd, rts_path.data(), H5P_DEFAULT) <= 0
+                ? h5::write(fd, rts_path, utils::sequence<std::chrono::seconds>(start, interval, stop))
+                : h5::open(fd, rts_path);
+                
+            std::cerr << "02 session start" << std::endl;
+            return h5::read<std::vector<std::string>>(ds);
+        }
+
         void on_resize(size_t R, size_t C) { //n_rows, n_cols
             max_slot = R;
             generics::resize(R,C, h5_bid,h5_ask,h5_trade,  h5_bid_volume, h5_ask_volume, h5_trade_volume);
@@ -270,11 +308,45 @@ namespace io::hdf5 {
         } catch(const h5::error::any& err){
             ERROR << err.what() << std::endl;
         }
+        
+
+        void on_session_end(){
+			// condionally update trading days, given there has been RTS data processed
+			if ( H5Lexists(fd, "stats", H5P_DEFAULT) > 0) try {
+				std::vector<std::string> active_days = h5::ls(fd, "stats");
+				h5::ds_t ds;
+				if (H5Lexists(fd, tradingdays_path.data(), H5P_DEFAULT) > 0)
+					ds = h5::open(fd, tradingdays_path);
+				else ds = h5::create<std::string>(fd, tradingdays_path, h5::current_dims{0}, h5::max_dims{H5S_UNLIMITED}, h5::chunk{512}| h5::gzip{9});
+				h5::set_extent(ds, h5::current_dims{active_days.size()});
+				h5::write(ds, active_days, h5::offset{0}, h5::count{active_days.size()});
+			} catch(const h5::error::any& err) {}
+
+			const auto& all_contracts = global::state::flat_map;
+			std::vector<std::string> asset_names(all_contracts.size());
+			TRACE << "instruments: " << all_contracts.size() << std::endl;
+			for(uint64_t contract: all_contracts) {
+				auto[symbol, index] = utils::base64::decode(contract);
+				if(index >= asset_names.size())
+					throw std::runtime_error("Decoded index out of bounds.");
+				asset_names[index] = utils::trim(symbol);
+			}
+			TRACE << "asset decoding has been completed" << std::endl;
+            if (H5Fflush(fd, H5F_SCOPE_GLOBAL) < 0)
+                THROW_RUNTIME_ERROR("hdf5 flush has failed...");
+            if(global::state::flat_map.size() != all_contracts.size()) try {
+                h5::set_extent(ds, h5::current_dims{asset_names.size()});
+                h5::write(fd, asset_path, asset_names, h5::offset{0}, h5::count{asset_names.size()});
+            } catch(const h5::error::any& err) {
+                ERROR << err.what() << std::endl;
+            } else INFO << "symbol/contract table has not changed, total: " << all_contracts.size() << std::endl;
+        }
 
         uint64_t slot, max_slot, counter = 0;
     private:
         std::string rts_path, asset_path, tradingdays_path;
         h5::fd_t fd;
+        h5::ds_t ds;
         h5::dcpl_t dcpl;
         h5::pt_t irts;
         time_point last_time, today;
