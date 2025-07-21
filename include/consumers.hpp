@@ -57,7 +57,7 @@ namespace io::base {
         using contract_t  = uint16_t;
 
         consumer_t(bool is_irts_enabled, bool is_rts_enabled)
-            : contracts(*this), rts(rts), is_irts_enabled(is_irts_enabled), is_rts_enabled(is_rts_enabled) {
+            : contracts(*this), is_irts_enabled(is_irts_enabled), is_rts_enabled(is_rts_enabled) {
         }
 
         void resize(size_t n_time_slots, size_t n_symbols) {
