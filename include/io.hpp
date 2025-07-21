@@ -23,6 +23,7 @@
 
 #include <patterns.hpp>
 #include <producers.hpp>
+#include <consumers.hpp>
 #include <utils.hpp>
 
 #ifdef HAVE_GOOGLE_PROFILER
