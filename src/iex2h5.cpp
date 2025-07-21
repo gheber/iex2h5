@@ -20,6 +20,7 @@
 #include <patterns.hpp>
 #include <producers.hpp>
 #include <consumers.hpp>
+#include <csv.hpp>
 #include <base64.hpp>
 #include <threadpool.hpp>
 #include <io.hpp>
@@ -157,8 +158,8 @@ int main(int argc, char **argv) {
 			<< "\033[1m[iex2h5]\033[0m Visit \033[4mhttps://vargaconsulting.github.io/iex2h5/\033[0m — Star it, Share it, Support Open Tools ⭐️\n";
 			
 			std::map<std::string, std::function<void()>> execute {
-				{"hdf5", io::create<io::hdf5::consumer_t>(files, start, interval, stop, 
-					output_path_or_url, rts_path, instruments_path, trading_days_path, is_irts_enabled, is_rts_enabled, compression_level)}
+				{"hdf5", io::create<io::hdf5::consumer_t>(files, start, interval, stop, output_path_or_url, rts_path, instruments_path, trading_days_path, is_irts_enabled, is_rts_enabled, compression_level)},
+				{"csv", io::create<io::csv::consumer_t>(files, start, interval, stop, output_path_or_url, instruments_path, is_irts_enabled, is_rts_enabled)}					
 			};
 			if(!execute.contains(dispatch))
 				std::cerr << "[iex2h5] error: unknown dispatch backend: " << dispatch << std::endl;
