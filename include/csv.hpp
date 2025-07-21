@@ -15,8 +15,8 @@ namespace io::csv {
         using typename base::clock, typename base::duration, typename base::time_point, typename base::contract_t;
         using base::I, base::T, base::contracts, base::rts, base::CONTRACT_ID_MASK;
 
-        consumer_t(std::string dir, std::string asset_path, bool is_irts_enabled, bool is_rts_enabled) : base(is_irts_enabled, is_rts_enabled),
-            dir(dir), asset_path(asset_path) {
+        consumer_t(std::string dir, std::string asset_path, std::string tradingdays_path, bool is_irts_enabled, bool is_rts_enabled) : base(is_irts_enabled, is_rts_enabled),
+            dir(dir), asset_path(asset_path), tradingdays_path(tradingdays_path) {
             namespace fs = std::filesystem;
             if (fs::exists(dir) && fs::is_directory(dir)) {
                 INFO << "directory exists..." << std::endl;
@@ -43,7 +43,7 @@ namespace io::csv {
         
             try {
                 std::string today = date::format("%F", floor<days>(day));
-                std::string filename = dir + "/" + today + ".csv";
+                std::string filename = dir + "/irts/" + today + ".csv";
                 fs::path filepath(filename);
         
                 if (!fs::exists(filepath)) {
@@ -112,12 +112,30 @@ namespace io::csv {
             } catch (const std::exception& e) {
                 ERROR << "Failed to write asset file: " << e.what() << '\n';
             }
+            std::set<std::string> trading_days;
+            for (const auto& entry : fs::directory_iterator(dir + "/irts")) {
+                if (!entry.is_regular_file()) continue;
+
+                auto name = entry.path().filename().string();
+                if (name.size() == 14 && name.ends_with(".csv")) {
+                    std::string date = name.substr(0, 10);  // "YYYY-MM-DD"
+                    trading_days.insert(date);
+                }
+            }
+            if (!trading_days.empty()) {
+                fs::path path(dir + "/" + tradingdays_path);
+                std::ofstream fd(path);
+                if (!fd) THROW_RUNTIME_ERROR("Failed to write trading days index: " + path.string());
+    
+                for (const auto& day : trading_days)
+                    fd << day << std::endl;
+            }
         }
 
         uint64_t slot, max_slot, counter = 0;
     private:
         std::ofstream ofs;
-        std::string asset_path, today, dir, filename;
+        std::string asset_path, tradingdays_path, today, dir, filename;
         std::vector<std::string> start, stop;
     };
 }
