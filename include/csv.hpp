@@ -13,7 +13,7 @@ namespace io::csv {
     struct consumer_t : public io::base::consumer_t<consumer_t> {
         using base = io::base::consumer_t<consumer_t>;
         using typename base::clock, typename base::duration, typename base::time_point, typename base::contract_t;
-        using base::I, base::T, base::contracts, base::rts;
+        using base::I, base::T, base::contracts, base::rts, base::CONTRACT_ID_MASK;
 
         consumer_t(std::string dir, std::string asset_path, bool is_irts_enabled, bool is_rts_enabled) : base(is_irts_enabled, is_rts_enabled),
             dir(dir), asset_path(asset_path) {
@@ -21,6 +21,19 @@ namespace io::csv {
             if (fs::exists(dir) && fs::is_directory(dir)) {
                 INFO << "directory exists..." << std::endl;
             } else fs::create_directories(dir);
+
+            std::vector<std::string> instruments;
+            fs::path path = fs::path(dir + "/" + asset_path);
+        
+            if (fs::exists(path)) {
+                std::ifstream file(path);
+                if (!file) THROW_RUNTIME_ERROR("Failed to open asset file for reading: " + path.string());
+        
+                std::string line;
+                while (std::getline(file, line))
+                    if (!line.empty()) instruments.push_back(std::move(line));
+                if (!instruments.empty()) batch_insert(instruments);
+            }            
         }
 
         void on_day_begin(time_point day) {
@@ -81,8 +94,24 @@ namespace io::csv {
             std::cout << " ✗" << std::endl;
         }
 
-        void on_session_end(){
+        void on_session_end() {
+            namespace fs = std::filesystem;
             if (ofs.is_open()) ofs.close();
+            try {
+                fs::path path(dir + "/" + asset_path);
+                if (fs::exists(path)) fs::remove(path);
+                std::ofstream fd(path);
+
+                if (!fd) THROW_RUNTIME_ERROR("Failed to open asset file for writing: " + path.string());
+                std::ranges::sort(flat_map, [](uint64_t a, uint64_t b) {
+                    return  (a & CONTRACT_ID_MASK) < (b & CONTRACT_ID_MASK);
+                });
+                for (const auto& contract : flat_map)
+                    fd << utils::base64::decode(contract).first << std::endl;
+                fd.close();
+            } catch (const std::exception& e) {
+                ERROR << "Failed to write asset file: " << e.what() << '\n';
+            }
         }
 
         uint64_t slot, max_slot, counter = 0;
