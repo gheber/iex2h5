@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
 	namespace ch = std::chrono;
 	using std::cout, std::cerr, std::endl;
 
-	std::string output_path_or_url, rts_path, instruments_path, trading_days_path, days, interval, start, stop, convert,
+	std::string output_path_or_url, rts_path, instruments_path, trading_days_path, days, interval, time_range, date_range, convert,
 		copyright = "Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada   info@vargaconsulting.ca";
 
     unsigned compression_level;
@@ -47,19 +47,20 @@ int main(int argc, char **argv) {
 	program.add_argument("-h", "--help")
 	.action([&](const std::string& s) {
 		cout << "\033[1m" "IEX2H5 converts IEX TOPS Datasets to HDF5 Format" "\033[0m" << endl << endl;
-		cout << "iex2h5 is a specialized tool for importing IEX TOPS datasets into the HDF5 data format," << endl;
-		cout << "enabling efficient  storage and analysis of large  financial datasets. HDF5 is a widely" << endl;
-		cout << "used file format for handling large, complex, and hierarchical data, supported by major" << endl;
-		cout << "programming languages including Julia, Python, MATLAB, C, C++, and Node.js." << endl;
-		cout << endl;	
-		cout << "This application allows users to convert captured packet data streams (e.g., DEEP/TOPS)" << endl;
-		cout << "into structured HDF5 datasets for advanced analytics and seamless integration into" << endl;
-		cout << "scientific, engineering, and financial workflows." << endl << endl;
-		
+		cout << "iex2h5 is a specialized tool for importing IEX TOPS datasets into the HDF5 format,"
+			"enabling efficient storage and analysis of large-scale financial data. HDF5 is a widely"
+			"adopted format for managing hierarchical, structured data and is supported across major"
+			"environments such as Julia, Python, MATLAB, C++, and Node.js.\n\n"
+
+			"This tool allows users to convert captured packet data streams (e.g. IEX DEEP/TOPS) into"
+			"structured HDF5 datasets for quantitative analysis, visualization, and integration with"
+			"scientific, engineering, or trading workflows." << endl;
 		cout << program << endl << endl;
-		
-		cout << "\033[1m" "example:" "\033[0m" <<endl;
-		cout << "   " << argv[0] << " --time-interval 10 -o ~/iex.h5  ~/data/**/*.pcap.gz" << endl;
+		cout << "\033[1m" "Examples:" "\033[0m" <<endl;
+		cout << "   " << argv[0] << " -o ~/iex.h5 -c irts ~/data/202{4,5}-{04,05}-??.pcap.gz # Convert gzipped PCAP files to IRTS (brace expansion and globs supported)" << std::endl;
+		cout << "   " << argv[0] << " -o rts.h5  --time-interval 00:00:10 -c rts iex.h5      # Load IRTS from HDF5 and convert to RTS matrices at 10-seconds intervals" << endl;
+		cout << "   " << argv[0] << " -o ~/iex.h5 -c irts ~/data/**/*.pcap.gz                # Convert gzipped PCAP files to IRTS tickdata and store in HDF5 format" << endl;
+		cout << "   " << argv[0] << " -o rts.h5  --time-interval 00:05:00 -c rts *.pcap.gz   # Load IRTS from HDF5 and convert to RTS matrices at 5-minutes intervals" << endl;
 		cout << endl;
 		cout << "\033[1m[iex2h5]\033[0m Market data © IEX — Investors Exchange. Attribution required. See https://iextrading.com" << std::endl;
 		cout << copyright << endl << endl;
@@ -81,17 +82,18 @@ int main(int argc, char **argv) {
         std::exit(0);
     });
 	program.add_argument("--time-interval").default_value(std::string("00:01:00")).help("temporal interval in hh::mm::ss format, irts stream is converted into");
-	program.add_argument("--start").default_value(std::string("14:30:00")).help("lower bound in UTC, considers events only after");
-	program.add_argument("--stop").default_value(std::string("21:00:00")).help("upper bound in UTC, considers events only before");
-	
+	program.add_argument("--time-range").default_value(std::string("14:30:00-21:00:00")).help("Time window in UTC, specified as START-END (e.g. 14:30:00-21:00:00). Events outside this range are ignored.");
+	program.add_argument("--date-range").default_value(std::string("2016-12-01:today")).help("Inclusive trading date range in format START:END (e.g. 2016-12-01:2020-01-01). Use 'today' as a valid END value.");
+
 	program.add_argument("-o", "--output").default_value(std::string("./iex.h5")).help("path to the HDF5 container");
 	
-	program.add_argument("--rts-path").default_value(std::string("/time.txt")).help("hdf5-group/directory for regular time interval index");
-	program.add_argument("--instruments-path").default_value(std::string("/instruments.txt")).help("hdf5-group/directory for listed [symbols|assets|financial] instruments");
-	program.add_argument("--trading-days-path").default_value(std::string("/trading_days.txt")).help("hdf5-group/directory for active trading days");
-	program.add_argument("-g", "--gzip").default_value(static_cast<unsigned>(1)).scan<'u', unsigned>().help("0-9 0 for no compression, 9 for highest");
+	program.add_argument("--rts-path").default_value(std::string("/time.txt")).help("HDF5 path for regular time index");
+	program.add_argument("--instruments-path").default_value(std::string("/instruments.txt")).help("HDF5 path for instrument (symbol) list");
+	program.add_argument("--trading-days-path").default_value(std::string("/trading_days.txt")).help("HDF5 path for trading day index");
+	program.add_argument("-g", "--gzip").default_value(static_cast<unsigned>(1)).scan<'u', unsigned>().help("Compression level (0 = none, 9 = maximum)");
 	
 	program.add_argument("-c", "--convert").default_value(std::string("all")).choices("rts", "irts", "all", "none").help("Which conversion pipeline to run: rts | irts | none | all");
+
 	program.add_argument("remaining").remaining();
 	program.add_argument("--third-party-licenses").nargs('*').default_value(std::vector<std::string>{"all"}).implicit_value("all")
 		.help("Print license(s) for a third-party library (or 'all | license 01 [, license 02, ...]')");
@@ -139,8 +141,8 @@ int main(int argc, char **argv) {
 	
 	h5::mute();
     try {
-		std::tie(interval, start, stop, output_path_or_url, rts_path, instruments_path, trading_days_path, compression_level, convert) = std::make_tuple(
-			program.get<std::string>("--time-interval"), program.get<std::string>("--start"), program.get<std::string>("--stop"),
+		std::tie(interval, time_range, date_range, output_path_or_url, rts_path, instruments_path, trading_days_path, compression_level, convert) = std::make_tuple(
+			program.get<std::string>("--time-interval"), program.get<std::string>("--time-range"), program.get<std::string>("--date-range"),
 			program.get<std::string>("--output"),
 			program.get<std::string>("--rts-path"), program.get<std::string>("--instruments-path"), program.get<std::string>("trading-days-path"),
 			program.get<unsigned>("--gzip"), program.get<std::string>("--convert"));
@@ -155,10 +157,11 @@ int main(int argc, char **argv) {
 			<< " file" << (files.size() > 1 ? "s" : "") 
 			<< " using backend: " << dispatch << " — using 1 thread — © Varga Consulting, 2017–2025\n"
 			<< "\033[1m[iex2h5]\033[0m Visit \033[4mhttps://vargaconsulting.github.io/iex2h5/\033[0m — Star it, Share it, Support Open Tools ⭐️\n";
+			std::pair<std::string,std::string> time = utils::parse::time_interval(time_range),
+				date = utils::parse::date_interval(date_range);
 			
 			std::map<std::string, std::function<void()>> execute {
-				{"hdf5", io::create<io::hdf5::consumer_t>(files, start, interval, stop, 
-					output_path_or_url, rts_path, instruments_path, trading_days_path, is_irts_enabled, is_rts_enabled, compression_level)}
+				{"hdf5", io::create<io::hdf5::consumer_t>(files, date, time, interval, output_path_or_url, rts_path, instruments_path, trading_days_path, is_irts_enabled, is_rts_enabled, compression_level)}
 			};
 			if(!execute.contains(dispatch))
 				std::cerr << "[iex2h5] error: unknown dispatch backend: " << dispatch << std::endl;

@@ -18,7 +18,7 @@
 #include <iex.hpp>
 #include <zlib-ng.h>
 #include <algorithm>
-
+#include <h5cpp/all>
 namespace utils::pcap {
 	enum class link_type : uint16_t {
 		NULL_LINKTYPE = 0, ETHERNET = 1, TOKEN_RING = 6, ARCNET = 7, SLIP = 8, PPP = 9, FDDI = 10, PPPoE = 50, 
@@ -374,4 +374,31 @@ namespace iex::pcapng {
 		idb_t* idb;
 	};
 } // namespace iex::pcapng
+
+namespace h5 {
+	template <class consumer_t> struct producer_t {
+		using clock      = typename consumer_t::clock;
+		using duration   = typename clock::duration;
+		using time_point = typename clock::time_point;
+
+		producer_t(std::string path, std::pair<std::string, std::string> date){
+			try {
+				fd = h5::open(path, H5F_ACC_SWMR_READ);
+			} catch(h5::error::any err){
+				ERROR << err.what() << std::endl;
+			}
+		}
+		
+		void run(consumer_t& ref, duration start_, duration stop_) {
+			consumer = &ref; start = start_; stop = stop_;
+			std::cerr << "================================" << std::endl;
+		}
+		
+	duration start, stop, heart_beat_interval;
+	private:
+		consumer_t* consumer = nullptr;
+		h5::fd_t fd;
+		h5::ds_t ds;
+	};
+}
 

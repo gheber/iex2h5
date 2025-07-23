@@ -493,3 +493,23 @@ namespace file {
         throw std::runtime_error("Unable to detect format: " + path);
     }    
 }
+namespace utils::pair {
+    std::pair<std::string, std::string> split(const std::string& str, char delimiter) {
+        size_t pos = str.find(delimiter);
+        if (pos != std::string::npos)
+            return {str.substr(0, pos), str.substr(pos + 1)};
+        return {str, ""};
+    }
+}
+
+namespace utils::parse {
+    std::pair<std::string,std::string> time_interval(std::string interval){
+        return utils::pair::split(interval, '-');
+    }
+    std::pair<std::string,std::string> date_interval(std::string interval){
+        std::pair<std::string,std::string> date = utils::pair::split(interval, ':');
+        if( to_lower(date.second) == "today") 
+            date.second = date::format("%F", floor<std::chrono::days>(std::chrono::system_clock::now()));
+        return date;        
+    }    
+}

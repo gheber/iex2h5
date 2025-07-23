@@ -29,38 +29,38 @@ sudo cmake --install build
 steven@gauss:~/projects/iex2h5/build$ iex2h5 --help
 IEX2H5 converts IEX TOPS Datasets to HDF5 Format
 
-iex2h5 is a specialized tool for importing IEX TOPS datasets into the HDF5 data format,
-enabling efficient  storage and analysis of large  financial datasets. HDF5 is a widely
-used file format for handling large, complex, and hierarchical data, supported by major
-programming languages including Julia, Python, MATLAB, C, C++, and Node.js.
+iex2h5 is a specialized tool for importing IEX TOPS datasets into the HDF5 format,enabling efficient storage and analysis of large-scale financial data. HDF5 is a widelyadopted format for managing hierarchical, structured data and is supported across majorenvironments such as Julia, Python, MATLAB, C++, and Node.js.
 
-This application allows users to convert captured packet data streams (e.g., DEEP/TOPS)
-into structured HDF5 datasets for advanced analytics and seamless integration into
-scientific, engineering, and financial workflows.
-
-Usage: ./build/iex2h5 [--help] [--version] [--time-interval VAR] [--start VAR] [--stop VAR] [--output VAR] [--rts-path VAR] [--instruments-path VAR] [--trading-days-path VAR] [--gzip VAR] [--convert VAR] [files]...
+This tool allows users to convert captured packet data streams (e.g. IEX DEEP/TOPS) intostructured HDF5 datasets for quantitative analysis, visualization, and integration withscientific, engineering, or trading workflows.
+Usage: ./iex2h5 [--help] [--version] [--time-interval VAR] [--time-range VAR] [--date-range VAR] [--output VAR] [--rts-path VAR] [--instruments-path VAR] [--trading-days-path VAR] [--gzip VAR] [--convert VAR] [--third-party-licenses] [remaining]...
 
 Positional arguments:
-  files                [nargs: 0 or more] 
+  remaining               [nargs: 0 or more] 
 
 Optional arguments:
-  -h, --help           shows help message 
-  --version            Print version information 
-  --time-interval      temporal interval in hh::mm::ss format, irts stream is converted into [nargs=0..1] [default: "00:01:00"]
-  --start              lower bound in UTC, considers events only after [nargs=0..1] [default: "14:30:00"]
-  --stop               upper bound in UTC, considers events only before [nargs=0..1] [default: "21:00:00"]
-  -o, --output         path to the HDF5 container [nargs=0..1] [default: "./iex.h5"]
-  --rts-path           hdf5-group/directory for regular time interval index [nargs=0..1] [default: "/time.txt"]
-  --instruments-path   hdf5-group/directory for listed [symbols|assets|financial] instruments [nargs=0..1] [default: "/instruments.txt"]
-  --trading-days-path  hdf5-group/directory for active trading days [nargs=0..1] [default: "/trading_days.txt"]
-  -g, --gzip           0-9 0 for no compression, 9 for highest [nargs=0..1] [default: 1]
-  -c, --convert        Which conversion pipeline to run: rts | irts | none | all  [nargs=0..1] [default: "all"]
+  -h, --help              shows help message 
+  --version               Print version information 
+  --time-interval         temporal interval in hh::mm::ss format, irts stream is converted into [nargs=0..1] [default: "00:01:00"]
+  --time-range            Time window in UTC, specified as START-END (e.g. 14:30:00-21:00:00). Events outside this range are ignored. [nargs=0..1] [default: "14:30:00-21:00:00"]
+  --date-range            Inclusive trading date range in format START:END (e.g. 2016-12-01:2020-01-01). Use 'today' as a valid END value. [nargs=0..1] [default: "2016-12-01:today"]
+  -o, --output            path to the HDF5 container [nargs=0..1] [default: "./iex.h5"]
+  --rts-path              HDF5 path for regular time index [nargs=0..1] [default: "/time.txt"]
+  --instruments-path      HDF5 path for instrument (symbol) list [nargs=0..1] [default: "/instruments.txt"]
+  --trading-days-path     HDF5 path for trading day index [nargs=0..1] [default: "/trading_days.txt"]
+  -g, --gzip              Compression level (0 = none, 9 = maximum) [nargs=0..1] [default: 1]
+  -c, --convert           Which conversion pipeline to run: rts | irts | none | all [nargs=0..1] [default: "all"]
+  --third-party-licenses  Print license(s) for a third-party library (or 'all | license 01 [, license 02, ...]') 
 
 
-example:
-   iex2h5 --time-interval 10 -o ~/iex.h5  ~/data/**/*.pcap.gz
+Examples:
+   ./iex2h5 -o ~/iex.h5 -c irts ~/data/202{4,5}-{04,05}-??.pcap.gz # Convert gzipped PCAP files to IRTS (brace expansion and globs supported)
+   ./iex2h5 -o rts.h5  --time-interval 00:00:10 -c rts iex.h5      # Load IRTS from HDF5 and convert to RTS matrices at 10-seconds intervals
+   ./iex2h5 -o ~/iex.h5 -c irts ~/data/**/*.pcap.gz                # Convert gzipped PCAP files to IRTS tickdata and store in HDF5 format
+   ./iex2h5 -o rts.h5  --time-interval 00:05:00 -c rts *.pcap.gz   # Load IRTS from HDF5 and convert to RTS matrices at 5-minutes intervals
 
-Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada  info@vargaconsulting.ca
+[iex2h5] Market data © IEX — Investors Exchange. Attribution required. See https://iextrading.com
+Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada   info@vargaconsulting.ca
+
 ```
 
 ### Notice:

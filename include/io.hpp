@@ -56,16 +56,17 @@ namespace utils::file {
 namespace io {
     template<typename consumer_t>
     requires io::consumer_concept<consumer_t>
-    void execute(std::string path, std::string start, std::string interval, std::string stop, consumer_t& consumer){
+    void execute(std::string path, std::pair<std::string, std::string> date, std::pair<std::string, std::string> time, std::string time_interval, consumer_t& consumer){
         using duration = typename consumer_t::duration;
         using pcap = iex::pcap::producer_t<stream::file_t, consumer_t>;
         using pcapng = iex::pcapng::producer_t<stream::file_t, consumer_t>;
         using gzip_pcap = iex::pcap::producer_t<stream::gzip_t, consumer_t>;
         using gzip_pcapng = iex::pcapng::producer_t<stream::gzip_t, consumer_t>;
+        using hdf5 = h5::producer_t<consumer_t>;
         
         FILE* fd = nullptr;
         const bool is_stdin = (path == "-");
-        auto [start_, interval_, stop_] = utils::strings_to_duration<duration>(start, interval, stop);
+        auto [start, interval, stop] = utils::strings_to_duration<duration>(time.first, time_interval, time.second);
         try {
             utils::file::format fmt = utils::file::detect(path);
             if (!is_stdin && fmt != utils::file::format::HDF5) {
@@ -77,10 +78,11 @@ namespace io {
             INFO << "<<<<<<<<<<<<< profiler started (output: iex2h5.prof) >>>>>>>>>>>>" << std::endl;
         #endif
             switch (fmt) {
-                case utils::file::format::PCAP:       pcap(fd, interval_).run(consumer, start_, stop_); break;
-                case utils::file::format::PCAPNG:     pcapng(fd, interval_).run(consumer, start_, stop_); break;
-                case utils::file::format::GZIP_PCAP:  gzip_pcap(fd, interval_).run(consumer, start_, stop_); break;
-                case utils::file::format::GZIP_PCAPNG:gzip_pcapng(fd, interval_).run(consumer, start_, stop_); break;
+                case utils::file::format::PCAP:       pcap(fd, interval).run(consumer, start, stop); break;
+                case utils::file::format::PCAPNG:     pcapng(fd, interval).run(consumer, start, stop); break;
+                case utils::file::format::GZIP_PCAP:  gzip_pcap(fd, interval).run(consumer, start, stop); break;
+                case utils::file::format::GZIP_PCAPNG:gzip_pcapng(fd, interval).run(consumer, start, stop); break;
+                case utils::file::format::HDF5:       hdf5(path, date).run(consumer, start, stop); break;
                 default: THROW_RUNTIME_ERROR("unsupported format...");
             }
             if (!is_stdin && fd) std::fclose(fd);
@@ -96,13 +98,13 @@ namespace io {
     
     template<typename consumer_t, typename... args_t>
     requires io::consumer_concept<consumer_t>
-    std::function<void()> create(std::vector<std::string> all, std::string start, std::string interval, std::string stop, args_t... args) {
+    std::function<void()> create(std::vector<std::string> all, std::pair<std::string, std::string> date, std::pair<std::string, std::string> time, std::string interval, args_t... args) {
         return [=]() mutable {
             consumer_t consumer( args... );
-            consumer.session_begin(start, interval, stop);
+            consumer.session_begin(time.first, interval, time.second);
             for (const auto& path : all) {
                 try {
-                    io::execute(path, start, interval, stop, consumer);
+                    io::execute(path, date, time, interval, consumer);
                 } catch (const global::shutdown_exception& ex) {
                     throw;                    
                 } catch (const std::exception& ex) {
