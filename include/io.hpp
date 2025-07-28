@@ -82,7 +82,7 @@ namespace io {
                 case utils::file::format::PCAPNG:     pcapng(fd, interval).run(consumer, start, stop); break;
                 case utils::file::format::GZIP_PCAP:  gzip_pcap(fd, interval).run(consumer, start, stop); break;
                 case utils::file::format::GZIP_PCAPNG:gzip_pcapng(fd, interval).run(consumer, start, stop); break;
-                case utils::file::format::HDF5:       hdf5(path, date).run(consumer, start, stop); break;
+                case utils::file::format::HDF5:       hdf5(path, date, interval).run(consumer, start, stop); break;
                 default: THROW_RUNTIME_ERROR("unsupported format...");
             }
             if (!is_stdin && fd) std::fclose(fd);

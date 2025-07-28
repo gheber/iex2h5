@@ -63,7 +63,12 @@ namespace utils {
 
         return arma::uvec(indices);
     }
-
+    inline std::chrono::sys_days string_to_day(const std::string& day){
+        std::istringstream in(day);
+        std::chrono::sys_days tp;
+        in >> std::chrono::parse("%F", tp);
+        return tp;
+    }
     template <typename duration>
     inline duration string_to_duration(const std::string& time_str) {
         int h, m, s;
