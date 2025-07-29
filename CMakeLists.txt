@@ -127,9 +127,12 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${INCLUDE_DIRS} src)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBS})
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_STRIP} $<TARGET_FILE:${PROJECT_NAME}>
-    COMMENT "Stripping symbols from ${PROJECT_NAME} binary"
-)
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_STRIP} $<TARGET_FILE:${PROJECT_NAME}>
+        COMMENT "Stripping symbols from ${PROJECT_NAME} binary"
+    )
+endif()
+
 add_custom_target(generate_licenses DEPENDS ${LICENSES_OUTPUT_FILE})
 add_dependencies(${PROJECT_NAME} generate_licenses)
