@@ -57,7 +57,7 @@ namespace io::base {
         using contract_t  = uint16_t;
 
         consumer_t(bool is_irts_enabled, bool is_rts_enabled)
-            : contracts(*this), rts(rts), is_irts_enabled(is_irts_enabled), is_rts_enabled(is_rts_enabled) {
+            : contracts(*this), is_irts_enabled(is_irts_enabled), is_rts_enabled(is_rts_enabled) {
         }
 
         void resize(size_t n_time_slots, size_t n_symbols) {
@@ -151,14 +151,15 @@ namespace io::base {
             }) {
                 rts = static_cast<derived*>(this)->on_session_begin(start, interval, stop);
             } else rts = utils::sequence<std::chrono::seconds>(start, interval, stop);
-            T = rts.size();
+
+            std::tie(original_contract_size, T) = std::make_tuple(flat_map.size(), rts.size());
         }
         void session_end(){
             if constexpr (requires(derived d) { d.on_session_end(); })
                 static_cast<derived*>(this)->on_session_end();            
         }
 
-        contract_t T, I; //< time and instruments
+        contract_t T, I, original_contract_size;
         consumer_t<derived>& contracts;
         std::string status, clear = "\033[2K\r";
         duration start, stop, interval;
@@ -349,15 +350,16 @@ namespace io::hdf5 {
 			TRACE << "asset decoding has been completed" << std::endl;
             if (H5Fflush(fd, H5F_SCOPE_GLOBAL) < 0)
                 THROW_RUNTIME_ERROR("hdf5 flush has failed...");
-            if(flat_map.size() != all_contracts.size()) try {
+            if(flat_map.size() != original_contract_size) try {
                 h5::set_extent(ds, h5::current_dims{asset_names.size()});
                 h5::write(fd, asset_path, asset_names, h5::offset{0}, h5::count{asset_names.size()});
             } catch(const h5::error::any& err) {
                 ERROR << err.what() << std::endl;
             } else INFO << "symbol/contract table has not changed, total: " << all_contracts.size() << std::endl;
+            std::cerr <<"rts count: " << rts_counter << std::endl;
         }
 
-        uint64_t slot, max_slot, counter = 0;
+        uint64_t slot, max_slot, counter = 0, rts_counter = 0;
     private:
         std::string rts_path, asset_path, tradingdays_path;
         h5::fd_t fd;
