@@ -218,6 +218,39 @@ namespace utils {
     
         return files;
     }
+
+    inline std::uintmax_t path_size(std::filesystem::path const& path) {
+        namespace fs = std::filesystem;
+        std::uintmax_t total = 0;
+        if (fs::is_regular_file(path))
+            return fs::file_size(path);
+        if (fs::is_directory(path))
+            for (auto const& entry : fs::recursive_directory_iterator(
+                path, fs::directory_options::skip_permission_denied))
+                if (entry.is_regular_file()) total += entry.file_size();
+        return total;
+    }
+    inline std::uintmax_t path_size(std::string const& pattern) {
+        auto files = resolve_input_paths(std::vector<std::string>{pattern});
+        std::uintmax_t total = 0; 
+        for (auto const& fp : files) 
+            total += path_size(std::filesystem::path{fp});
+        return total;
+    }
+    inline std::uintmax_t path_size(std::vector<std::string> const& patterns) {
+        std::uintmax_t total = 0; 
+        for (auto const& pat : patterns)
+            total += path_size(pat); 
+        return total;
+    }    
+    inline std::string human_readable(std::uintmax_t b) {
+        static constexpr std::array<char const*,4> units{"B","KiB","MiB","GiB"};
+        double v = double(b);
+        int u = 0;
+        while (v >= 1024.0 && u < 3)
+            v /= 1024.0, ++u;
+        return fmt::format("{:.2f} {}", v, units[u]);
+    }
 } // namespace util
 
 namespace utils::pcap {
