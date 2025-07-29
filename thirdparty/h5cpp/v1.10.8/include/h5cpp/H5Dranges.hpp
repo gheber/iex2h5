@@ -48,9 +48,7 @@ namespace h5::impl {
         using pipeline_t = impl::pipeline_t<impl::basic_pipeline_t>;
 
         iterator_t() : ds{H5I_UNINIT}, offset{0}, total{0},
-            current_dims{0}, chunk_dims{0},
-            cache{nullptr}, chunk{nullptr},
-            filter{H5Z_FILTER_ERROR}{}
+            current_dims{0}, chunk_dims{0}, filter{H5Z_FILTER_ERROR}{}
             
         reference operator*() const { return cache[offset % chunk_dims]; }
         pointer operator->() const { return &cache[offset % chunk_dims]; }
@@ -102,7 +100,7 @@ namespace h5::impl {
             } else if (N > 1) THROW_RUNTIME_ERROR("for performance reasons only a single filter is allowed...");
             if(filter != H5Z_FILTER_DEFLATE && filter != H5Z_FILTER_NONE)
                 THROW_RUNTIME_ERROR("unsupported filter: only gzip-compressed or uncompressed data is supported...");
-            else chunk.resize(chunk_dims * sizeof(T));
+            else chunk.resize(chunk_dims);
             TRACE << "offset: " << offset << " chunk: " << chunk_dims << " size: " << total << " N:" << N << " " << filter << std::endl;
             if(offset < total && offset % chunk_dims == 0)
                 read_chunk();  // preload first chunk or any aligned offset
@@ -131,8 +129,7 @@ namespace h5::impl {
         hsize_t offset, total,
             current_dims, chunk_dims;
         unsigned cd_values[16];
-        std::vector<T> cache;
-        std::vector<std::byte> chunk;
+        std::vector<T> cache, chunk;
         H5Z_filter_t filter;
     };
 } // namespace h5::impl

@@ -5,21 +5,17 @@
 
 #pragma once
 
+#include "consumers.hpp"
 #include "tick.hpp"
 #include <chrono>
 #include <cstdint>
-#include <functional>
 #include <array>
-#include <stdexcept>
 #include <cstring>
-#include <span>
 #include <string>
 #include <sys/time.h>
-#include <bit>
 #include <error.hpp>
 #include <utils.hpp>
 #include <iex.hpp>
-#include <vector>
 #include <zlib-ng.h>
 #include <algorithm>
 #include <h5cpp/all>

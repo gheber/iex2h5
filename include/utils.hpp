@@ -12,14 +12,11 @@
 #include <cmath>
 #include <stdexcept>
 #include <cstdio>
-#include <concepts>
-#include <bit> 
 #include <armadillo>
 #include <date/date.h> 
 #include <compat.hpp>
 #include <filesystem>
 #include <regex>
-#include <type_traits>
 #include <unordered_set>
 #include <fstream>
 #include <algorithm>
@@ -64,10 +61,10 @@ namespace utils {
         return arma::uvec(indices);
     }
     inline std::chrono::sys_days string_to_day(const std::string& day){
-        std::istringstream in(day);
-        std::chrono::sys_days tp;
-        in >> std::chrono::parse("%F", tp);
-        return tp;
+        std::istringstream in{day};
+        std::chrono::sys_days dp;
+        date::from_stream(in, "%F", dp);
+        return dp;
     }
     template <typename duration>
     inline duration string_to_duration(const std::string& time_str) {
@@ -200,7 +197,6 @@ namespace utils {
     std::vector<std::string> resolve_input_paths(const std::vector<std::string>& raw_inputs) {
         namespace fs = std::filesystem;
         std::vector<std::string> files;
-    
         for (const auto& filename : raw_inputs) {
             if (filename == "-") 
                 files.emplace_back(filename);  // STDIN
@@ -216,12 +212,42 @@ namespace utils {
             } else if (filename.find('*') != std::string::npos || filename.find('?') != std::string::npos) {
                 auto matches = expand_glob(filename);
                 files.insert(files.end(), matches.begin(), matches.end());
-            } else {
-                std::cerr << "[warn] Skipping unrecognized input: " << filename << std::endl;
-            }
+            } else files.emplace_back(filename);
         }
-    
         return files;
+    }
+
+    inline std::uintmax_t path_size(std::filesystem::path const& path) {
+        namespace fs = std::filesystem;
+        std::uintmax_t total = 0;
+        if (fs::is_regular_file(path)) return fs::file_size(path);
+        if (fs::is_directory(path))
+            for (auto const& entry : fs::recursive_directory_iterator(path, fs::directory_options::skip_permission_denied))
+                if (entry.is_regular_file()) total += entry.file_size();
+        return total;
+    }
+
+    inline std::uintmax_t path_size(std::string const& pattern) {
+        auto files = resolve_input_paths(std::vector<std::string>{pattern});
+        std::uintmax_t total = 0; 
+        for (auto const& fp : files) 
+            total += path_size(std::filesystem::path{fp});
+        return total;
+    }
+
+    inline std::uintmax_t path_size(std::vector<std::string> const& patterns) {
+        std::uintmax_t total = 0; 
+        for (auto const& pat : patterns)
+            total += path_size(pat); 
+        return total;
+    }    
+    inline std::string human_readable(std::uintmax_t b) {
+        static constexpr std::array<char const*,4> units{"B","KiB","MiB","GiB"};
+        double v = double(b);
+        int u = 0;
+        while (v >= 1024.0 && u < 3)
+            v /= 1024.0, ++u;
+        return fmt::format("{:.2f} {}", v, units[u]);
     }
 } // namespace util
 
@@ -464,17 +490,12 @@ namespace file {
             char magic[8] = {};
             file.read(magic, sizeof(magic));
     
-            // HDF5 magic (8 bytes): "\211HDF\r\n\032\n"
             if (std::memcmp(magic, "\211HDF\r\n\032\n", 8) == 0) return "hdf5";
-    
-            // GZip magic: 1F 8B
             if ((uint8_t)magic[0] == 0x1F && (uint8_t)magic[1] == 0x8B) {
                 std::string ext = utils::to_lower(fs::path(path).extension().string());
                 if (ext.ends_with(".gz") || ext.ends_with(".gzip"))
                     return "csv.gz"; // could refine further
             }
-    
-            // crude CSV sniff
             std::string line;
             file.seekg(0);
             if (std::getline(file, line)) {
@@ -482,8 +503,6 @@ namespace file {
                 if (line.find('\t') != std::string::npos) return "tsv";
             }
         }
-    
-        // file doesn't exist or fallback
         const std::string ext = utils::to_lower(fs::path(path).extension().string());
     
         if (ext == ".h5" || ext == ".hdf5") return "hdf5";
@@ -491,7 +510,6 @@ namespace file {
         if (ext == ".tsv") return "tsv";
         if (ext == ".json") return "json";
     
-        // URL schemes (for Redis/MySQL/etc.)
         if (path.starts_with("redis://")) return "redis";
         if (path.starts_with("mysql://")) return "mysql";
     

@@ -3,16 +3,10 @@
  * Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
  * Contact: info@vargaconsulting.ca */
 
-#include <sstream>
 #include <string>
-#include <map>
-#include <functional>
 #include <iostream>
-#include <ranges>
 #include <string>
-#include <filesystem>
 #include <csignal>
-#include <atomic>
 
 #include <argparse>
 #include <error.hpp>
@@ -20,11 +14,13 @@
 #include <patterns.hpp>
 #include <producers.hpp>
 #include <consumers.hpp>
+#include <hdf5.hpp>
 #include <csv.hpp>
 #include <base64.hpp>
 #include <threadpool.hpp>
 #include <io.hpp>
 #include <licenses.hpp>
+#include <global_state.hpp>
 
 #ifndef IEX_MAX_SYMBOLS
 	#define IEX_MAX_SYMBOLS 1 << 16
@@ -38,8 +34,8 @@ int main(int argc, char **argv) {
 	namespace fs = std::filesystem;
 	namespace ch = std::chrono;
 	using std::cout, std::cerr, std::endl;
-
-	std::string output_path_or_url, rts_path, instruments_path, trading_days_path, days, interval, time_range, date_range, convert,
+	
+	std::string output_path_or_url, rts_path, instruments_path, trading_days_path, days, interval, time_range, date_range, convert, benchmark_format,
 		copyright = "Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada   info@vargaconsulting.ca";
 
     unsigned compression_level;
@@ -60,7 +56,8 @@ int main(int argc, char **argv) {
 		cout << "\033[1m" "Examples:" "\033[0m" <<endl;
 		cout << "   " << argv[0] << " -o ~/iex.h5 -c irts ~/data/202{4,5}-{04,05}-??.pcap.gz # Convert gzipped PCAP files to IRTS (brace expansion and globs supported)" << std::endl;
 		cout << "   " << argv[0] << " -o rts.h5  --time-interval 00:00:10 -c rts iex.h5      # Load IRTS from HDF5 and convert to RTS matrices at 10-seconds intervals" << endl;
-		cout << "   " << argv[0] << " -o ~/iex.h5 -c irts ~/data/**/*.pcap.gz                # Convert gzipped PCAP files to IRTS tickdata and store in HDF5 format" << endl;
+		cout << "   " << argv[0] << " -o ~/iex.h5 -c irts ~/data/**/*.pcap                   # Convert plain PCAP files to IRTS tickdata and store in HDF5 format" << endl;
+		cout << "   " << argv[0] << " -o ~/out.csv -c irts ~/data/**/*.pcap                  # Convert plain PCAP files to IRTS tickdata and store in directory of CSV files" << endl;
 		cout << "   " << argv[0] << " -o rts.h5  --time-interval 00:05:00 -c rts *.pcap.gz   # Load IRTS from HDF5 and convert to RTS matrices at 5-minutes intervals" << endl;
 		cout << endl;
 		cout << "\033[1m[iex2h5]\033[0m Market data © IEX — Investors Exchange. Attribution required. See https://iextrading.com" << std::endl;
@@ -98,7 +95,7 @@ int main(int argc, char **argv) {
 	program.add_argument("remaining").remaining();
 	program.add_argument("--third-party-licenses").nargs('*').default_value(std::vector<std::string>{"all"}).implicit_value("all")
 		.help("Print license(s) for a third-party library (or 'all | license 01 [, license 02, ...]')");
-
+	program.add_argument("--benchmark-format").default_value(std::string("human")).choices("human", "csv").help("output format for benchmark line: human or csv");
 	try {
 		program.parse_args(argc, argv);
 	} catch (const std::exception& err){
@@ -142,11 +139,11 @@ int main(int argc, char **argv) {
 	
 	h5::mute();
     try {
-		std::tie(interval, time_range, date_range, output_path_or_url, rts_path, instruments_path, trading_days_path, compression_level, convert) = std::make_tuple(
+		std::tie(interval, time_range, date_range, output_path_or_url, rts_path, instruments_path, trading_days_path, compression_level, convert, benchmark_format) = std::make_tuple(
 			program.get<std::string>("--time-interval"), program.get<std::string>("--time-range"), program.get<std::string>("--date-range"),
 			program.get<std::string>("--output"),
 			program.get<std::string>("--rts-path"), program.get<std::string>("--instruments-path"), program.get<std::string>("trading-days-path"),
-			program.get<unsigned>("--gzip"), program.get<std::string>("--convert"));
+			program.get<unsigned>("--gzip"), program.get<std::string>("--convert"), program.get<std::string>("--benchmark-format"));
 
 		bool is_irts_enabled = (convert == "all" || convert =="irts"),
 			is_rts_enabled = (convert == "all" || convert =="rts");
@@ -161,14 +158,30 @@ int main(int argc, char **argv) {
 			std::pair<std::string,std::string> time = utils::parse::time_interval(time_range),
 				date = utils::parse::date_interval(date_range);
 			
+			global::state::total_input = utils::path_size(program.get<std::vector<std::string>>("remaining"));
+			global::state::total_output_before = utils::path_size(output_path_or_url);
+
 			std::map<std::string, std::function<void()>> execute {
 				{"hdf5", io::create<io::hdf5::consumer_t>(files, date, time, interval, output_path_or_url, rts_path, instruments_path, trading_days_path, is_irts_enabled, is_rts_enabled, compression_level)},
 				{"csv", io::create<io::csv::consumer_t>(files, date, time, interval, output_path_or_url, instruments_path, trading_days_path, is_irts_enabled, is_rts_enabled)}					
 			};
+
+
 			if(!execute.contains(dispatch))
 				std::cerr << "[iex2h5] error: unknown dispatch backend: " << dispatch << std::endl;
 			else try {
+				using gs = global::state;
 				execute[dispatch]();
+				gs::total_output_after = utils::path_size(output_path_or_url);
+				uint64_t total_output_difference = gs::total_output_after - gs::total_output_before;
+				std::string benchmark_line = benchmark_format != "csv" ?
+					fmt::format("benchmark: {} events in {}ms  {:.1f} kilo ticks/s, {:.6f} µs/tick latency, {} input converted into {} output",
+						gs::event_count, gs::duration, gs::event_rate / 1e3, gs::event_latency / 1e3, utils::human_readable(gs::total_input), utils::human_readable(total_output_difference)) 
+					: fmt::format("{},{},{},{},{},{},{},{},{},{},{},{},{}",
+						convert, dispatch, gs::instrument_count, gs::rts_count, gs::event_count, gs::duration, gs::event_rate, gs::event_latency, gs::total_input,
+						total_output_difference, compression_level, time_range, date_range);
+				cerr << benchmark_line << endl;
+
 				cout << "\033[1m[iex2h5]\033[0m Conversion complete — all files processed successfully \n"
 				"\033[1m[iex2h5]\033[0m Market data © IEX — Investors Exchange. Attribution required. See https://iextrading.com" << endl;
 			} catch (const global::shutdown_exception& ex){

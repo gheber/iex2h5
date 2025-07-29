@@ -69,7 +69,8 @@ namespace io::csv {
             auto ns_since_epoch = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
             ofs << ns_since_epoch << ',' << contract << ',' << price << ',' << size << ','
                 << is_bid << ',' << is_trade << ',' << is_ask << '\n';
-            ++counter;            
+            ++counter;
+            global::state::event_count++;          
         }
         
         void on_trade_report(time_point time, contract_t id, float price, uint32_t size, uint8_t ) {

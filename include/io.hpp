@@ -22,6 +22,8 @@
 #include <consumers.hpp>
 #include <utils.hpp>
 #include <hdf5.h>
+#include <hdf5.hpp>
+#include <csv.hpp>
 
 #ifdef HAVE_GOOGLE_PROFILER
     #include <gperftools/profiler.h>

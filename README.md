@@ -16,13 +16,28 @@ A high-performance C++ utility for converting [IEX Transport Protocol (IEX-TP)][
 | Ubuntu 22.04  |![gcc13][200]|![gcc14][201]|![gcc15][202]|![clang17][250]|![clang18][251]|![clang19][252]|![clang20][253]|
 | Ubuntu 24.04  |![gcc13][300]|![gcc14][301]|![gcc15][302]|![clang17][350]|![clang18][351]|![clang19][352]|![clang20][353]|
 
-## 📦 Installation
+## Installation
 ```bash
 sudo apt install build-essential cmake
 cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
 cmake --build build --parallel
 sudo cmake --install build
 ```
+
+## Performance <small>on a tiny dataset (unrealistic burst‐only scenario)</small>
+
+
+| Conversion   | Input                         | # Output| Time (ms) | Throughput (M ticks/s) | Latency (µs/tick) | In (GiB) | Out (GiB) | In‑rate (GiB/s) | Out‑rate (GiB/s) |
+|--------------|-------------------------------|---------|-----------|------------------------|-------------------|----------|-----------|-----------------|------------------|
+| HDF5 → HDF5  | `iex.h5`                      | 00.h5   | 1 062     | 57.39                  | 0.017             | 4.90     | 1.36      | 4.61            | 1.28             |
+| PCAP → HDF5  | `TOPS-2017-01-0{3,4}.pcap`    | 01.h5   | 4 873     | 12.51                  | 0.079             | 4.87     | 1.36      | 1.00            | 0.28             |
+| PCAP → CSV   | `TOPS-2017-01-0{3,4}.pcap`    | 02.csv  | 36 408    | 1.67                   | 0.597             | 4.87     | 2.32      | 0.13            | 0.064            |
+| HDF5 → CSV   | `iex.h5`                      | 03.csv  | 34 607    | 1.76                   | 0.567             | 4.90     | 2.32      | 0.14            | 0.067            |
+
+**Notes:**
+- These quick‑and‑dirty measurements were taken on burst inputs and don’t reflect real‑world probabilistic sampling under sustained data flow.
+- The CSV directory mirrors the HDF5 IRTS layout. Although IEX2H5 can read gzip‑compressed PCAP files and write HDF5 with gzip filters, this chart only compares uncompressed input and output.
+- **Platform:** Linux Mint 22.1 g++ (Ubuntu 14.2.0-4ubuntu2~24.04) 14.2.0 ThinkPad X1 Carbon Gen 12  Intel(R) Core(TM) Ultra 5 125U
 
 # Example Usage: Convert IEX TOPS Dataset
 ```
@@ -32,7 +47,7 @@ IEX2H5 converts IEX TOPS Datasets to HDF5 Format
 iex2h5 is a specialized tool for importing IEX TOPS datasets into the HDF5 format,enabling efficient storage and analysis of large-scale financial data. HDF5 is a widelyadopted format for managing hierarchical, structured data and is supported across majorenvironments such as Julia, Python, MATLAB, C++, and Node.js.
 
 This tool allows users to convert captured packet data streams (e.g. IEX DEEP/TOPS) intostructured HDF5 datasets for quantitative analysis, visualization, and integration withscientific, engineering, or trading workflows.
-Usage: ./iex2h5 [--help] [--version] [--time-interval VAR] [--time-range VAR] [--date-range VAR] [--output VAR] [--rts-path VAR] [--instruments-path VAR] [--trading-days-path VAR] [--gzip VAR] [--convert VAR] [--third-party-licenses] [remaining]...
+Usage: ./build/iex2h5 [--help] [--version] [--time-interval VAR] [--time-range VAR] [--date-range VAR] [--output VAR] [--rts-path VAR] [--instruments-path VAR] [--trading-days-path VAR] [--gzip VAR] [--convert VAR] [--third-party-licenses] [--benchmark-format VAR] [remaining]...
 
 Positional arguments:
   remaining               [nargs: 0 or more] 
@@ -50,13 +65,15 @@ Optional arguments:
   -g, --gzip              Compression level (0 = none, 9 = maximum) [nargs=0..1] [default: 1]
   -c, --convert           Which conversion pipeline to run: rts | irts | none | all [nargs=0..1] [default: "all"]
   --third-party-licenses  Print license(s) for a third-party library (or 'all | license 01 [, license 02, ...]') 
+  --benchmark-format      output format for benchmark line: human or csv [nargs=0..1] [default: "human"]
 
 
 Examples:
-   ./iex2h5 -o ~/iex.h5 -c irts ~/data/202{4,5}-{04,05}-??.pcap.gz # Convert gzipped PCAP files to IRTS (brace expansion and globs supported)
-   ./iex2h5 -o rts.h5  --time-interval 00:00:10 -c rts iex.h5      # Load IRTS from HDF5 and convert to RTS matrices at 10-seconds intervals
-   ./iex2h5 -o ~/iex.h5 -c irts ~/data/**/*.pcap.gz                # Convert gzipped PCAP files to IRTS tickdata and store in HDF5 format
-   ./iex2h5 -o rts.h5  --time-interval 00:05:00 -c rts *.pcap.gz   # Load IRTS from HDF5 and convert to RTS matrices at 5-minutes intervals
+   ./build/iex2h5 -o ~/iex.h5 -c irts ~/data/202{4,5}-{04,05}-??.pcap.gz # Convert gzipped PCAP files to IRTS (brace expansion and globs supported)
+   ./build/iex2h5 -o rts.h5  --time-interval 00:00:10 -c rts iex.h5      # Load IRTS from HDF5 and convert to RTS matrices at 10-seconds intervals
+   ./build/iex2h5 -o ~/iex.h5 -c irts ~/data/**/*.pcap                   # Convert plain PCAP files to IRTS tickdata and store in HDF5 format
+   ./build/iex2h5 -o ~/out.csv -c irts ~/data/**/*.pcap                  # Convert plain PCAP files to IRTS tickdata and store in directory of CSV files
+   ./build/iex2h5 -o rts.h5  --time-interval 00:05:00 -c rts *.pcap.gz   # Load IRTS from HDF5 and convert to RTS matrices at 5-minutes intervals
 
 [iex2h5] Market data © IEX — Investors Exchange. Attribution required. See https://iextrading.com
 Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada   info@vargaconsulting.ca
