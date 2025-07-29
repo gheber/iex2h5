@@ -4,6 +4,7 @@
  * Contact: info@vargaconsulting.ca */
 
 #pragma once
+#include <sys/types.h>
 #define ARMA_NO_DEBUG
 #include <armadillo>
 #include <h5cpp/core>
@@ -38,6 +39,8 @@ namespace global {
     };
     struct state {
         static inline std::atomic<bool> shutdown_requested = false;
+        static inline u_int64_t event_count, event_rate, duration, event_latency, total_input, 
+            total_output_before, total_output_after, total_output_delta; 
     };
 }
 namespace h5 {
@@ -165,8 +168,8 @@ namespace io::base {
                 static_cast<derived*>(this)->on_session_end();
             benchmark_stop = clock::now();
             auto ms = duration_cast<milliseconds>(benchmark_stop - benchmark_start).count();
-            double rate = n_events * 1000.0 / ms, ell = ms * 1000.0 / n_events;
-            std::cout << "✔ " << n_events << " ticks in " << ms << " ms  " << fmt::format("{:.1f} kilo ticks/s, {:.6f} µs/tick latency\n", rate/1e3, ell);
+            global::state::event_rate = n_events * 1000.0 / ms, global::state::event_latency = ms * 1e6 / n_events;
+            global::state::event_count = n_events, global::state::duration = ms;
         }
 
         uint64_t n_events;

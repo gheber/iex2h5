@@ -156,8 +156,8 @@ int main(int argc, char **argv) {
 			<< " using backend: " << dispatch << " — using 1 thread — © Varga Consulting, 2017–2025\n"
 			<< "\033[1m[iex2h5]\033[0m Visit \033[4mhttps://vargaconsulting.github.io/iex2h5/\033[0m — Star it, Share it, Support Open Tools ⭐️\n";
 
-			std::uintmax_t total_input = utils::path_size(program.get<std::vector<std::string>>("remaining")), 
-				total_output_before =  utils::path_size(output_path_or_url), total_output_after;
+			global::state::total_input = utils::path_size(program.get<std::vector<std::string>>("remaining"));
+			global::state::total_output_before = utils::path_size(output_path_or_url);
 
 			std::map<std::string, std::function<void()>> execute {
 				{"hdf5", io::create<io::hdf5::consumer_t>(files, start, interval, stop, 
@@ -169,8 +169,11 @@ int main(int argc, char **argv) {
 				std::cerr << "[iex2h5] error: unknown dispatch backend: " << dispatch << std::endl;
 			else try {
 				execute[dispatch]();
-				total_output_after = utils::path_size(output_path_or_url);
-				std::cout << "input size: " << utils::human_readable(total_input) << " output: " << utils::human_readable(total_output_after - total_output_before) << std::endl;
+				global::state::total_output_after = utils::path_size(output_path_or_url);
+
+				std::cout << fmt::format("{} events in {}ms  {:.1f} kilo ticks/s, {:.6f} µs/tick latency, {} input converted into {} output\n",
+					global::state::event_count, global::state::duration, global::state::event_rate / 1e3, global::state::event_latency / 1e3,
+					utils::human_readable(global::state::total_input), utils::human_readable(global::state::total_output_after - global::state::total_output_before));
 
 				cout << "\033[1m[iex2h5]\033[0m Conversion complete — all files processed successfully \n"
 				"\033[1m[iex2h5]\033[0m Market data © IEX — Investors Exchange. Attribution required. See https://iextrading.com" << endl;
