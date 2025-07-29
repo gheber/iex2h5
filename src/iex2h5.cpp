@@ -155,15 +155,23 @@ int main(int argc, char **argv) {
 			<< " file" << (files.size() > 1 ? "s" : "") 
 			<< " using backend: " << dispatch << " — using 1 thread — © Varga Consulting, 2017–2025\n"
 			<< "\033[1m[iex2h5]\033[0m Visit \033[4mhttps://vargaconsulting.github.io/iex2h5/\033[0m — Star it, Share it, Support Open Tools ⭐️\n";
-			
+
+			std::uintmax_t total_input = utils::path_size(program.get<std::vector<std::string>>("remaining")), 
+				total_output_before =  utils::path_size(output_path_or_url), total_output_after;
+
 			std::map<std::string, std::function<void()>> execute {
 				{"hdf5", io::create<io::hdf5::consumer_t>(files, start, interval, stop, 
 					output_path_or_url, rts_path, instruments_path, trading_days_path, is_irts_enabled, is_rts_enabled, compression_level)}
 			};
+
+
 			if(!execute.contains(dispatch))
 				std::cerr << "[iex2h5] error: unknown dispatch backend: " << dispatch << std::endl;
 			else try {
 				execute[dispatch]();
+				total_output_after = utils::path_size(output_path_or_url);
+				std::cout << "input size: " << utils::human_readable(total_input) << " output: " << utils::human_readable(total_output_after - total_output_before) << std::endl;
+
 				cout << "\033[1m[iex2h5]\033[0m Conversion complete — all files processed successfully \n"
 				"\033[1m[iex2h5]\033[0m Market data © IEX — Investors Exchange. Attribution required. See https://iextrading.com" << endl;
 			} catch (const global::shutdown_exception& ex){
