@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
 	namespace ch = std::chrono;
 	using std::cout, std::cerr, std::endl;
 
-	std::string output_path_or_url, rts_path, instruments_path, trading_days_path, days, interval, start, stop, convert,
+	std::string output_path_or_url, rts_path, instruments_path, trading_days_path, days, interval, start, stop, convert, benchmark_format,
 		copyright = "Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada   info@vargaconsulting.ca";
 
     unsigned compression_level;
@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
 	program.add_argument("remaining").remaining();
 	program.add_argument("--third-party-licenses").nargs('*').default_value(std::vector<std::string>{"all"}).implicit_value("all")
 		.help("Print license(s) for a third-party library (or 'all | license 01 [, license 02, ...]')");
-
+	program.add_argument("--benchmark-format").default_value(std::string("human")).choices("human", "csv").help("output format for benchmark line: human or csv");
 	try {
 		program.parse_args(argc, argv);
 	} catch (const std::exception& err){
@@ -139,11 +139,11 @@ int main(int argc, char **argv) {
 	
 	h5::mute();
     try {
-		std::tie(interval, start, stop, output_path_or_url, rts_path, instruments_path, trading_days_path, compression_level, convert) = std::make_tuple(
+		std::tie(interval, start, stop, output_path_or_url, rts_path, instruments_path, trading_days_path, compression_level, convert, benchmark_format) = std::make_tuple(
 			program.get<std::string>("--time-interval"), program.get<std::string>("--start"), program.get<std::string>("--stop"),
 			program.get<std::string>("--output"),
 			program.get<std::string>("--rts-path"), program.get<std::string>("--instruments-path"), program.get<std::string>("trading-days-path"),
-			program.get<unsigned>("--gzip"), program.get<std::string>("--convert"));
+			program.get<unsigned>("--gzip"), program.get<std::string>("--convert"), program.get<std::string>("--benchmark-format"));
 
 		bool is_irts_enabled = (convert == "all" || convert =="irts"),
 			is_rts_enabled = (convert == "all" || convert =="rts");
@@ -170,10 +170,13 @@ int main(int argc, char **argv) {
 			else try {
 				execute[dispatch]();
 				global::state::total_output_after = utils::path_size(output_path_or_url);
-
-				std::cout << fmt::format("{} events in {}ms  {:.1f} kilo ticks/s, {:.6f} µs/tick latency, {} input converted into {} output\n",
-					global::state::event_count, global::state::duration, global::state::event_rate / 1e3, global::state::event_latency / 1e3,
-					utils::human_readable(global::state::total_input), utils::human_readable(global::state::total_output_after - global::state::total_output_before));
+				uint64_t total_output_difference = global::state::total_output_after - global::state::total_output_before;
+				std::string benchmark_line = benchmark_format != "csv" ?
+					fmt::format("{} events in {}ms  {:.1f} kilo ticks/s, {:.6f} µs/tick latency, {} input converted into {} output",
+						global::state::event_count, global::state::duration, global::state::event_rate / 1e3, global::state::event_latency / 1e3,
+						utils::human_readable(global::state::total_input), utils::human_readable(total_output_difference)) 
+					: fmt::format("{},{},{},{},{},{}", global::state::event_count, global::state::duration, global::state::event_rate, global::state::event_latency, global::state::total_input, total_output_difference);
+				cout << "benchmark:" << benchmark_line << endl;
 
 				cout << "\033[1m[iex2h5]\033[0m Conversion complete — all files processed successfully \n"
 				"\033[1m[iex2h5]\033[0m Market data © IEX — Investors Exchange. Attribution required. See https://iextrading.com" << endl;
