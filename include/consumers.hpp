@@ -155,7 +155,7 @@ namespace io::base {
             }) {
                 rts = static_cast<derived*>(this)->on_session_begin(start, interval, stop);
             } else rts = utils::sequence<std::chrono::seconds>(start, interval, stop);
-            T = rts.size();
+            T = rts.size() - 1;
         }
         void session_end(){
             if constexpr (requires(derived d) { d.on_session_end(); })
