@@ -87,16 +87,20 @@ namespace io::base {
 
         void trade_report(time_point time, uint64_t symbol, float price, uint32_t size, uint8_t flag) {
             static_cast<derived*>(this)->on_trade_report(time, contracts[symbol], price, size, flag);
+            n_events++;
         }
         void ask(time_point time, uint64_t symbol, float price, uint32_t size, uint8_t flag) {
             static_cast<derived*>(this)->on_ask(time, contracts[symbol], price, size, flag);
+            n_events++;
         }
         void bid(time_point time, uint64_t symbol, float price, uint32_t size, uint8_t flag) {
             static_cast<derived*>(this)->on_bid(time, contracts[symbol], price, size, flag);
+            n_events++;
         }
         void trade_break(time_point time, uint64_t symbol, float price, uint32_t size, uint8_t flag) {
             if constexpr (requires(derived& d) {d.trade_break(time, symbol, price, size, flag);})
                 static_cast<derived*>(this)->trade_break(time, contracts[symbol], price, size, flag);
+            n_events++;
         }
         
         [[nodiscard]] contract_t operator[](uint64_t iex_symbol) try {
@@ -146,6 +150,8 @@ namespace io::base {
         }
         
         void session_begin(std::string start, std::string interval, std::string stop) {
+            benchmark_start = clock::now();
+            n_events = 0LL;
             if constexpr (requires(derived d) {
                 { d.on_session_begin(start, interval, stop) } -> std::same_as<std::vector<duration>>;
             }) {
@@ -153,11 +159,18 @@ namespace io::base {
             } else rts = utils::sequence<std::chrono::seconds>(start, interval, stop);
             T = rts.size();
         }
-        void session_end(){
+        void session_end() {
+            using namespace std::chrono;
             if constexpr (requires(derived d) { d.on_session_end(); })
-                static_cast<derived*>(this)->on_session_end();            
+                static_cast<derived*>(this)->on_session_end();
+            benchmark_stop = clock::now();
+            auto ms = duration_cast<milliseconds>(benchmark_stop - benchmark_start).count();
+            double rate = n_events * 1000.0 / ms, ell = ms * 1000.0 / n_events;
+            std::cout << "✔ " << n_events << " ticks in " << ms << " ms  " << fmt::format("{:.1f} kilo ticks/s, {:.6f} µs/tick latency\n", rate/1e3, ell);
         }
 
+        uint64_t n_events;
+        time_point benchmark_start, benchmark_stop;
         contract_t T, I; //< time and instruments
         consumer_t<derived>& contracts;
         std::string status, clear = "\033[2K\r";
