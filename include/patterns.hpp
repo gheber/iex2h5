@@ -4,14 +4,15 @@
  * Contact: info@vargaconsulting.ca */
 
 #pragma once
-
-#include <chrono>
-#include <concepts>
 #include <cstdint>
-#include <string>
-#include <functional>
-namespace io {
 
+namespace iex::system {
+	enum class message: char {
+		start_of_msgs = 'O', start_of_sys_hours = 'S', start_of_market = 'R',
+		end_of_msgs = 'C', end_of_sys_hours = 'E', end_of_market = 'M' };
+}
+
+namespace io {
 	template <typename T>
 	concept has_clock = requires {
 		typename T::clock;
@@ -25,7 +26,8 @@ namespace io {
 		uint64_t stock,
 		float price,
 		uint32_t size,
-		uint8_t flag) {
+		uint8_t flag,
+		iex::system::message msg) {
 		c.heart_beat(tp);
 		c.day_begin(tp);
 		c.day_end(tp);
@@ -33,6 +35,7 @@ namespace io {
 		c.ask(tp, stock, price, size, flag);
 		c.bid(tp, stock, price, size, flag);
 		c.trade_break(tp, stock, price, size, flag);
+		c.syscall(tp, msg);
 	};
 
 	template <typename T, typename C>
@@ -63,6 +66,7 @@ namespace io {
 		void ask(time_point t, uint64_t s, float p, uint32_t z, uint8_t f)          { consumer->ask(t, s, p, z, f); }
 		void bid(time_point t, uint64_t s, float p, uint32_t z, uint8_t f)          { consumer->bid(t, s, p, z, f); }
 		void trade_break(time_point t, uint64_t s, float p, uint32_t z, uint8_t f)  { consumer->trade_break(t, s, p, z, f); }
+		void syscall(time_point t, iex::system::message m)  { consumer->syscall(t, m); }
 
 		duration start, stop, heart_beat_interval;
 	private:

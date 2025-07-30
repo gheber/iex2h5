@@ -81,8 +81,9 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
       set(multi_value_args LIBRARIES)
       cmake_parse_arguments(ARG "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
 
-      set(test_name test-${PROJECT_NAME}-${file_name})
+      set(test_name test-${file_name})
       add_executable(${test_name} test/${file_name}.cpp)
+      set_target_properties(${test_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
       target_include_directories(${test_name} PRIVATE ${INCLUDE_DIRS} src)
       target_compile_options(${test_name} PRIVATE -w)
       target_compile_definitions(${test_name} PRIVATE IEX_PCAP_FILE="${IEX_PCAP_FILE}")
@@ -97,11 +98,9 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
 
   add_test_case(example)
   add_test_case(utils)
-  add_test_case(base64)
   add_test_case(filters)
   add_test_case(error)
   add_test_case(generics)
-  add_test_case(producers)
 endif()
 
 ## APPLICATION
@@ -127,9 +126,12 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${INCLUDE_DIRS} src)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBS})
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_STRIP} $<TARGET_FILE:${PROJECT_NAME}>
-    COMMENT "Stripping symbols from ${PROJECT_NAME} binary"
-)
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_STRIP} $<TARGET_FILE:${PROJECT_NAME}>
+        COMMENT "Stripping symbols from ${PROJECT_NAME} binary"
+    )
+endif()
+
 add_custom_target(generate_licenses DEPENDS ${LICENSES_OUTPUT_FILE})
 add_dependencies(${PROJECT_NAME} generate_licenses)

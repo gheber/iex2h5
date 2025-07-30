@@ -5,20 +5,20 @@
 
 #pragma once
 
+#include "consumers.hpp"
+#include "tick.hpp"
+#include <chrono>
 #include <cstdint>
-#include <functional>
 #include <array>
-#include <stdexcept>
 #include <cstring>
-#include <span>
+#include <string>
 #include <sys/time.h>
-#include <bit>
 #include <error.hpp>
 #include <utils.hpp>
 #include <iex.hpp>
 #include <zlib-ng.h>
 #include <algorithm>
-
+#include <h5cpp/all>
 namespace utils::pcap {
 	enum class link_type : uint16_t {
 		NULL_LINKTYPE = 0, ETHERNET = 1, TOKEN_RING = 6, ARCNET = 7, SLIP = 8, PPP = 9, FDDI = 10, PPPoE = 50, 
@@ -374,4 +374,72 @@ namespace iex::pcapng {
 		idb_t* idb;
 	};
 } // namespace iex::pcapng
+
+
+namespace h5 {
+	template <class consumer_t> struct producer_t {
+		using clock      = typename consumer_t::clock;
+		using duration   = typename clock::duration;
+		using time_point = typename clock::time_point;
+
+		producer_t(std::string path, std::pair<std::string, std::string> date, duration interval) : heart_beat_interval(interval.count()) {
+			INFO << date.first << " " << date.second << std::endl;
+			auto start = ::utils::string_to_day(date.first), stop = ::utils::string_to_day(date.second);
+			try {
+				fd = h5::open(path, H5F_ACC_SWMR_READ);
+				if ( H5Lexists(fd, "/irts", H5P_DEFAULT) > 0)
+					for(std::string day: h5::ls(fd, "/irts")) {
+						auto today = ::utils::string_to_day(day);
+						if (today >= start && today <= stop) trading_days.push_back(day); 
+					}
+			} catch(h5::error::any err){
+				ERROR << err.what() << std::endl;
+			}
+			INFO << "selected trading days: " <<  trading_days.size() << std::endl;
+		}
+		
+		void run(consumer_t& consumer, duration start, duration stop) {
+			using nanoseconds = std::chrono::nanoseconds;
+			if ( H5Lexists(fd, instruments_path.data(), H5P_DEFAULT) > 0) {
+				instruments = h5::read<std::vector<std::string>>(fd, instruments_path);
+				consumer.batch_insert(instruments);
+			}
+			
+			for(std::string day: trading_days) {
+				const time_point today = ::utils::string_to_day(day),
+					start_time = today + start, stop_time = today + stop;
+				const uint64_t start_tick = ::utils::to_ns(start_time), stop_tick = ::utils::to_ns(stop_time);
+				uint64_t hb = start_tick + heart_beat_interval;
+				consumer.day_begin( start_time );
+				h5::ds_t ds = h5::open(fd, "/irts/" + day);
+				for(const iex::tick_t& tick: h5::view<iex::tick_t>(ds) ) {
+					if(tick.time <= start_tick) continue;
+					if(tick.time >= stop_tick) break;
+					if(tick.time >= hb)
+						consumer.heart_beat( time_point{nanoseconds{hb}} ),
+						hb += heart_beat_interval;
+
+					const time_point now = time_point{nanoseconds{tick.time}};
+					switch(tick.flags){
+						case IS_BID: consumer.on_bid(now, tick.contract_id, tick.price, tick.size, 0); break;
+						case IS_TRADE: consumer.on_trade_report(now, tick.contract_id, tick.price, tick.size, 0); break;
+						case IS_ASK: consumer.on_ask(now, tick.contract_id, tick.price, tick.size, 0); break;
+						default: [[unlikely]]
+							WARNING << "unexpected flag: " << tick.flags << std::endl;
+						break;
+					}
+				}
+				consumer.heart_beat( time_point{nanoseconds{hb}} );
+				consumer.day_end( stop_time );
+			}
+		}
+		
+	private:
+		const std::string instruments_path = "instruments.txt";
+		const uint64_t heart_beat_interval;
+		h5::fd_t fd;
+		std::vector<std::string> trading_days, instruments;
+		static constexpr uint16_t IS_BID = 1<<0, IS_TRADE = 1<<1, IS_ASK = 1<<2;
+	};
+}
 

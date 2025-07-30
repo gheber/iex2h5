@@ -209,8 +209,6 @@ namespace iex::tops::v164 { // udpated Fab 27, 2018
 namespace iex { namespace tops {
 	using header = iex::protocol::header;
 }}
-
-
 namespace iex::tops::v163 {
 /* ADMINISTRATIVE MESSAGE FORMATS */
 
@@ -461,7 +459,6 @@ namespace iex {
 			const v156::quote_update* qu = &msg->qu;
 			const v156::trade_report* tr = &msg->tr;
 			const v156::trade_break*  tb = &msg->tb;
-		
 			switch(msg->hdr.type) {
 				case 'Q': // quote update
 					if(qu->ask_size) this->ask(tp, msg->hdr.symbol, 1e-4*qu->ask_price, qu->ask_size, 0);
@@ -469,6 +466,8 @@ namespace iex {
 					break;
 				case 'T': // trade report
 					this->trade_report(tp, msg->hdr.symbol, 1e-4 * tr->price, tr->size, msg->hdr.flag);
+					break;
+				case 'S': // this message is not disseminated from iex
 					break;
 			}                
 		}
@@ -484,7 +483,6 @@ namespace iex {
 			const v163::quote_update* qu = &msg->qu;
 			const v163::trade_report* tr = &msg->tr;
 			const v163::trade_break*  tb = &msg->tb;
-		
 			switch(msg->hdr.type) {
 				case 'Q': // quote update
 					if( qu->ask_size ) this->ask(tp,  msg->hdr.symbol, conv_scalar * qu->ask_price, qu->ask_size, msg->hdr.flag);
@@ -492,6 +490,9 @@ namespace iex {
 					break;
 				case 'T': // trade report
 					this->trade_report(tp, msg->hdr.symbol, conv_scalar * tr->price, tr->size, msg->hdr.flag);
+					break;
+				case 'S':
+					this->syscall(tp, static_cast<iex::system::message>(msg->hdr.flag));
 					break;
 			}                
 		}
