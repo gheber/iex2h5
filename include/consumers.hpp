@@ -129,6 +129,11 @@ namespace io::base {
             } else rts = utils::sequence<std::chrono::seconds>(start, interval, stop);
 
             std::tie(original_contract_size, T) = std::make_tuple(flat_map.size(), rts.size() - 1);
+            std::unordered_set<std::string> seen;
+            for(uint64_t contract: flat_map) {
+                std::string symbol = utils::base64::decode(contract).first;
+                if(!seen.insert(symbol).second) THROW_RUNTIME_ERROR("duplicate symbol has been detected:" + symbol);
+            }
         }
         void session_end() {
             using namespace std::chrono;
