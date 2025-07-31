@@ -17,7 +17,6 @@
 #include <hdf5.hpp>
 #include <csv.hpp>
 #include <base64.hpp>
-#include <threadpool.hpp>
 #include <io.hpp>
 #include <licenses.hpp>
 #include <global_state.hpp>

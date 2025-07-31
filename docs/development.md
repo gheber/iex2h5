@@ -23,7 +23,6 @@ The following third-party libraries are bundled under `thirdparty/` and integrat
 | **h5cpp**           | v1.10.8 | Modern C++17 interface to HDF5                   | [MIT](licenses/h5cpp)            |
 | **hdf5**            | v1.14.3 | C interface and binary format for storing scientific data | [BSD-like](licenses/hdf5)         |
 | **libzng**          | v2.1.6   | Optimized zlib-compatible compression library     | [Zlib](licenses/libzng)                      |
-| **threadpool**      | v2024.03 | Lightweight C++17 thread pool by Barak Shoshany   | [MIT](licenses/threadpool)                   |
 | **armadillo**       | v14.0.1 | Linear algebra library (BLAS/LAPACK backend)     | [Apache 2.0](licenses/armadillo) |
 | **argparse**        | v3.1.0  | Header-only argument parser for C++11/14         | [MIT](licenses/argparse)         |
 | **date**            | v3.0.1  | C++ date/time parsing utilities                  | [MIT](licenses/date)             |

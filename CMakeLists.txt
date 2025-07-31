@@ -70,7 +70,7 @@ endif()
 list(APPEND INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/include ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS} )
 list(APPEND LIBS 
   ${HDF5_C_LIBRARIES} ${ZLIB_LIBRARIES} 
-  libargparse libarmadillo libh5cpp libthreadpool libdate
+  libargparse libarmadillo libh5cpp libdate
   libfmt_static libhiredis_static librediscpp_static libzng_static libhdf5_static
   )
 
