@@ -86,25 +86,16 @@ namespace io::base {
             return 0;
         }
         void batch_insert(std::vector<std::string> instruments) {
-            std::ranges::transform(instruments, instruments.begin(), [](const std::string& symbol) {
-                if (symbol.size() > 8) throw std::invalid_argument("Symbol too long: " + symbol);
-                return symbol.size() < 8 ? utils::pad(symbol, 8, ' ') : symbol;
-            });
-            std::unordered_set<std::string_view> seen;
-            for (const auto& symbol : instruments) // verify if all elements are uniqe
-                if (!seen.insert(symbol).second) throw std::invalid_argument("Duplicate symbol in instruments: " + symbol);
-            std::set<char> character_table;
-            for (const auto& symbol : instruments) for (char c : symbol)
-                character_table.insert(c);
-        
-            std::stringbuf buf;
-            std::ostream os(&buf);
-            for (char c : character_table) os << "'" << c << "',";
-            TRACE << "size:" << character_table.size() << " {" << buf.str() << "}" << std::endl;
-
+            std::unordered_set<std::string> seen;
             flat_map.reserve(flat_map.size() + instruments.size());
-            for (const std::string& symbol : instruments)
-                flat_map.emplace_back( utils::base64::encode(symbol, flat_map.size()));
+            for (const auto& entry : flat_map)
+                seen.insert(utils::base64::decode(entry).first);
+
+            for (std::string symbol : instruments) {
+                symbol = utils::pad(symbol, 8, ' ');
+                if (symbol.size() > 8 || !seen.insert(symbol).second) continue;
+                flat_map.emplace_back(utils::base64::encode(symbol, flat_map.size()));
+            }
             std::ranges::sort(flat_map);
         }        
         contract_t find_or_insert(uint64_t iex_symbol) {
