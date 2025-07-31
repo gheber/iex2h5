@@ -9,7 +9,7 @@ To build and test `iex2h5`, the following tools are required:
 ### System Dependencies
 
 ```bash
-sudo apt install build-essential cmake libhdf5-dev pigz
+sudo apt install build-essential cmake 
 pipx install mkdocs
 pipx inject mkdocs mkdocs-material
 ```
@@ -72,7 +72,7 @@ Accepted categories: `feature`, `fix`, `refactor`, `docs`, `test`, `infra`, `per
 
 >  All changes **must** be linked to an issue — even small doc fixes — to maintain traceability and changelog generation.
 
-### 🌿 Branch Layout
+### Branch Layout
 
 * `main`: Reserved for stable releases.
 * `staging`: All features are merged here after CI passes.
@@ -159,31 +159,4 @@ Customize these to match your branding and style.
 - Use `snake_case` and postfix types with `_t`.
 - Ensure all changes compile cleanly with `-Wall -Wextra -Werror`.
 - Document any public-facing or structural changes under `docs/`.
-
-
-```cpp
-struct my_type_t {
-    std::string status(...){
-        ....
-    }
-    void on_day_begin(time_point day) try {
-        std::cout << status("▫ {}", day) << std::flush;   // newly created irts dataset
-    } catch(const h5::error::io::dataset::create& err) {
-        std::cout << status("▪ {}", day) << std::flush;   // overwrite existing dataset
-    } catch(...) {
-        std::cout << status("○ {}", day) << std::flush;   // some other problem
-    }
-    void on_heart_beat(time_point time) {
-        std::cout << status(" {:r}", time) << std::flush; // where {:r} reset line/print into same line
-    }
-    void on_day_end(time_point day) try {
-        std::cout << status(" ✓") << std::endl;           // succesful day closure
-    } catch(...) {
-        std::cout << status(" ✗") << std::endl;           // failed day closure
-    }
-    std::string state;
-}
-
-
-
 ```
