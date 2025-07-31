@@ -7,27 +7,25 @@
 
 #include <string>
 #include <iostream>
-#include <string_view>
 #include <chrono>
 #include <thread>
-#include <exception>
 #include <unistd.h>
 #include <sys/types.h>
 #include <syslog.h>
 #include <date/date.h>
-#include <date/tz.h> 
-#include "compat.hpp"
+#include <date/tz.h>
+#include <compat.hpp>
 namespace  {
-    inline std::string basename__(const std::string& path) {
+    inline std::string basename_(const std::string& path) {
         size_t pos = path.find_last_of('/');
         return (pos != std::string::npos) ? path.substr(pos + 1) : path;
     }
-    std::string thread_id__(){
+    std::string thread_id_(){
         std::stringstream ss; 
         ss << std::this_thread::get_id();
         return ss.str();
     }
-    std::string time_stamp__(){
+    std::string time_stamp_(){
         using namespace std::chrono;
         return  date::format("%H:%M:%S",
             date::floor<milliseconds>(system_clock::now()));
@@ -57,10 +55,10 @@ namespace sigma::syslog {
 #ifdef DEBUG 
     #define SIGMA_LOGGER_PREAMBLE \
         iex::compat::format("{:40}", iex::compat::format("[{:12} {:5}:{:<5} {:8}/{:<8} {:>15} #{:05}] ", \
-        time_stamp__(), getgid(), getuid(), getpid(), gettid(), basename__(__FILE__),  __LINE__ ))
+        time_stamp_(), getgid(), getuid(), getpid(), gettid(), basename_(__FILE__),  __LINE__ ))
 #else
     #define SIGMA_LOGGER_PREAMBLE \
-        iex::compat::format("{:40}", iex::compat::format("[{} {:>15} #{:05}] ", time_stamp__(),  basename__(__FILE__),  __LINE__ ))
+        iex::compat::format("{:40}", iex::compat::format("[{} {:>15} #{:05}] ", time_stamp_(),  basename_(__FILE__),  __LINE__ ))
 #endif
 
 #ifdef DEBUG 
@@ -80,7 +78,7 @@ namespace sigma::syslog {
 #ifdef H5CPP_ERROR_MSG
     #undef H5CPP_ERROR_MSG
 #endif
-#define H5CPP_ERROR_MSG( msg ) iex::compat::format("{} #{:05} {}", basename__(__FILE__),  __LINE__ , msg)
+#define H5CPP_ERROR_MSG( msg ) iex::compat::format("{} #{:05} {}", basename_(__FILE__),  __LINE__ , msg)
 #ifndef RUNTIME_ERROR 
     #define RUNTIME_ERROR(msg) std::runtime_error( \
         iex::compat::format("{} {}", static_cast<std::string>(SIGMA_LOGGER_PREAMBLE), static_cast<std::string>(msg)))

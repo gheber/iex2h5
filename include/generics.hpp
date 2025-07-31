@@ -6,7 +6,6 @@
 #pragma once
 #define ARMA_NO_DEBUG
 #include <concepts>
-#include <vector>
 #include <cmath>
 #include <limits>
 #include <type_traits>
@@ -49,7 +48,6 @@ namespace generics {
     concept arma_vector_like = requires(T x) {
         { x.n_elem } -> std::convertible_to<size_t>;
     } && detail::is_detected_v<T, detail::has_resize_void_t>;
-    
 
     template <typename T, typename U>
     concept has_fill_method = requires(T x, U val) {

@@ -12,9 +12,9 @@
 #pragma once
 
 #include <array>
+#include <cstring>
 #include <cstdint>
 #include <string>
-#include <string_view>
 #include <stdexcept>
 #include <utility>
 
@@ -28,19 +28,18 @@ namespace utils::base64::impl {
         '!','$','&',',','/',':',';','<','>','?','@',
         '{','|','}','[',']','_','(',')',  '\0'};
     
-    constexpr std::array<int8_t, 128> build_lookup() {
-        std::array<int8_t, 128> table{};
-        for (int i = 0; i < 128; ++i) table[i] = -1;
-        for (uint8_t i = 0; i < SYMBOL_BASE; ++i)
-            table[static_cast<size_t>(SYMBOL_ALPHABET[i])] = i;
+    constexpr std::array<char, 128> build_lookup() {
+        std::array<char, 128> table{};
+        for (unsigned i = 0; i < 128; ++i) table[i] = -1;
+        for (char i = 0; i < SYMBOL_BASE; ++i)
+            table[SYMBOL_ALPHABET[i]] = i;
         return table;
     }
     constexpr auto CHAR_TO_INDEX = build_lookup();
 
-    constexpr uint8_t symbol_char_to_index(char c) {
-        return (c >= 0 && c < 128 && CHAR_TO_INDEX[c] != -1)
-            ? static_cast<uint8_t>(CHAR_TO_INDEX[c])
-            : throw std::invalid_argument( iex::compat::format("invalid base64 symbol char {}", c ) );
+    constexpr uint8_t symbol_char_to_index(char c) noexcept {
+    return (c >= 0 && c < 128 && CHAR_TO_INDEX[c] != -1)
+        ? static_cast<uint8_t>(CHAR_TO_INDEX[c]) : 0xff;
     }
 
     inline uint64_t encode(uint64_t raw_symbol) {

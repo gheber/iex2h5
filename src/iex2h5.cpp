@@ -31,8 +31,6 @@ void signal_handler(int signal) {
 }
 
 int main(int argc, char **argv) {
-	namespace fs = std::filesystem;
-	namespace ch = std::chrono;
 	using std::cout, std::cerr, std::endl;
 	
 	std::string output_path_or_url, rts_path, instruments_path, trading_days_path, days, interval, time_range, date_range, convert, benchmark_format,

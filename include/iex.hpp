@@ -11,8 +11,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
-
-#include <chrono>
+#include <date/date.h>
 #include "patterns.hpp"
 
 namespace iex {
@@ -468,7 +467,7 @@ namespace iex {
 					this->trade_report(tp, msg->hdr.symbol, 1e-4 * tr->price, tr->size, msg->hdr.flag);
 					break;
 				case 'S': // this message is not disseminated from iex
-					break;
+				default: break;
 			}                
 		}
 
@@ -493,7 +492,7 @@ namespace iex {
 					break;
 				case 'S':
 					this->syscall(tp, static_cast<iex::system::message>(msg->hdr.flag));
-					break;
+				default: break;
 			}                
 		}
 
@@ -515,7 +514,7 @@ namespace iex {
 					break;
 				case 'T': // trade report
 					this->trade_report(tp, msg->hdr.symbol, 1e-4 * tr->price, tr->size, msg->hdr.flag);
-					break;
+				default: break;
 			}
 			// P -- not shortable, sort of important status info                
 		}
