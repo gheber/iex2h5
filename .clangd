@@ -1,0 +1,38 @@
+CompileFlags:
+  Add: 
+    - -std=c++23
+    - -Wall
+    - -Wextra
+    - -Wno-gnu-zero-variadic-macro-arguments      # quiets fmt-style macro false positives
+    - -Wno-unused-parameter                       # useful for base class interfaces
+    - -I./include
+    - -I./src
+    - -isystem/usr/include/c++/14
+    - -isystem/usr/include/x86_64-linux-gnu/c++/14
+
+Diagnostics:
+  UnusedIncludes: Strict
+  ClangTidy:
+    Add: 
+      - -*                               # start from nothing
+      - bugprone-*                       # real bugs
+      - llvm-include-order
+      - misc-unused-alias-decls
+    Remove:
+      - bugprone-easily-swappable-parameters
+      - performance-inefficient-stream-use
+      - readability-isolate-declaration
+      - cppcoreguidelines-avoid-magic-numbers    # too noisy
+      - cppcoreguidelines-pro-bounds-array-to-pointer-decay # noisy with Armadillo
+
+Index:
+  StandardLibrary: Yes                 # enable std::foo indexing (>=clangd 14)
+
+InlayHints:
+  Enabled: Yes                         # types, params, etc.
+
+Hover:
+  ShowAKA: Yes                         # show type aliases
+
+FallbackFlags:
+  - -std=c++23
