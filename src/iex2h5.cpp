@@ -21,6 +21,7 @@
 #include <io.hpp>
 #include <licenses.hpp>
 #include <global_state.hpp>
+#include <json.hpp>
 
 #ifndef IEX_MAX_SYMBOLS
 	#define IEX_MAX_SYMBOLS 1 << 16
@@ -163,7 +164,8 @@ int main(int argc, char **argv) {
 
 			std::map<std::string, std::function<void()>> execute {
 				{"hdf5", io::create<io::hdf5::consumer_t>(files, date, time, interval, output_path_or_url, rts_path, instruments_path, trading_days_path, is_irts_enabled, is_rts_enabled, compression_level)},
-				{"csv", io::create<io::csv::consumer_t>(files, date, time, interval, output_path_or_url, instruments_path, trading_days_path, is_irts_enabled, is_rts_enabled)}					
+				{"csv", io::create<io::csv::consumer_t>(files, date, time, interval, output_path_or_url, instruments_path, trading_days_path, is_irts_enabled, is_rts_enabled)},					
+				{"json", io::create<io::json::consumer_t>(files, date, time, interval, output_path_or_url, instruments_path, trading_days_path, is_irts_enabled, is_rts_enabled)}			
 			};
 
 
