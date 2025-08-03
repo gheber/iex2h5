@@ -26,13 +26,14 @@ sudo cmake --install build
 
 ## Performance <small>on a tiny dataset (unrealistic burst‐only scenario)</small>
 
-
-| Conversion   | Input                         | # Output| Time (ms) | Throughput (M ticks/s) | Latency (µs/tick) | In (GiB) | Out (GiB) | In‑rate (GiB/s) | Out‑rate (GiB/s) |
-|--------------|-------------------------------|---------|-----------|------------------------|-------------------|----------|-----------|-----------------|------------------|
-| HDF5 → HDF5  | `iex.h5`                      | 00.h5   | 1 062     | 57.39                  | 0.017             | 4.90     | 1.36      | 4.61            | 1.28             |
-| PCAP → HDF5  | `TOPS-2017-01-0{3,4}.pcap`    | 01.h5   | 4 873     | 12.51                  | 0.079             | 4.87     | 1.36      | 1.00            | 0.28             |
-| PCAP → CSV   | `TOPS-2017-01-0{3,4}.pcap`    | 02.csv  | 36 408    | 1.67                   | 0.597             | 4.87     | 2.32      | 0.13            | 0.064            |
-| HDF5 → CSV   | `iex.h5`                      | 03.csv  | 34 607    | 1.76                   | 0.567             | 4.90     | 2.32      | 0.14            | 0.067            |
+| Conversion   | Time<br>(ms) | Throughput<br>(M ticks/s) | Latency<br>(µs/tick) | Data IN<br>(GiB) | Data OUT<br>(GiB) |
+|--------------|-------------:|---------------------------:|---------------------:|-----------------:|------------------:|
+| HDF5 → HDF5  | 1 062        | 57.39                      | 0.017                | 4.90             | 1.36              |
+| PCAP → HDF5  | 4 873        | 12.51                      | 0.079                | 4.87             | 1.36              |
+| HDF5 → CSV   | 34 607       | 1.76                       | 0.567                | 4.90             | 2.32              |
+| PCAP → CSV   | 36 408       | 1.67                       | 0.597                | 4.87             | 2.32              |
+| HDF5 → JSON  | 56 814       | 1.10                       | 0.567                | 4.90             | 6.74              |
+| PCAP → JSON  | 65 941       | 0.90                       | 1.081                | 4.87             | 6.74              |
 
 **Notes:**
 - These quick‑and‑dirty measurements were taken on burst inputs and don’t reflect real‑world probabilistic sampling under sustained data flow.
