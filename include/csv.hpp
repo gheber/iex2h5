@@ -104,10 +104,10 @@ namespace io::csv {
                 std::ofstream fd(path);
 
                 if (!fd) THROW_RUNTIME_ERROR("Failed to open asset file for writing: " + path.string());
-                std::ranges::sort(flat_map, [](uint64_t a, uint64_t b) {
+                std::ranges::sort(flatmap, [](uint64_t a, uint64_t b) {
                     return  (a & CONTRACT_ID_MASK) < (b & CONTRACT_ID_MASK);
                 });
-                for (const auto& contract : flat_map)
+                for (const auto& contract : flatmap)
                     fd << utils::base64::decode(contract).first << std::endl;
                 fd.close();
             } catch (const std::exception& e) {

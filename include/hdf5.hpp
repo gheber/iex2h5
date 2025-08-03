@@ -202,7 +202,7 @@ namespace io::hdf5 {
 				h5::write(ds, active_days, h5::offset{0}, h5::count{active_days.size()});
 			} catch(const h5::error::any& err) {} // NOLINT(bugprone-empty-catch)
 
-			const auto& all_contracts = flat_map;
+			const auto& all_contracts = flatmap;
 			std::vector<std::string> asset_names(all_contracts.size());
 			TRACE << "instruments: " << all_contracts.size() << std::endl;
 			for(uint64_t contract: all_contracts) {
@@ -214,7 +214,7 @@ namespace io::hdf5 {
 			TRACE << "asset decoding has been completed" << std::endl;
             if (H5Fflush(fd, H5F_SCOPE_GLOBAL) < 0)
                 THROW_RUNTIME_ERROR("hdf5 flush has failed...");
-            if(flat_map.size() != original_contract_size) try {
+            if(flatmap.size() != original_contract_size) try {
                 h5::set_extent(ds, h5::current_dims{asset_names.size()});
                 h5::write(fd, asset_path, asset_names, h5::offset{0}, h5::count{asset_names.size()});
             } catch(const h5::error::any& err) {

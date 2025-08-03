@@ -49,7 +49,7 @@ namespace io::base {
         
         void day_begin(time_point day) {
             contract_t n_instruments;
-            n_instruments = flat_map.size();
+            n_instruments = flatmap.size();
             resize(T, n_instruments);
             if constexpr (requires(derived d) { d.on_day_begin(day); })
                 static_cast<derived*>(this)->on_day_begin(day);    
@@ -86,26 +86,17 @@ namespace io::base {
             return 0;
         }
         void batch_insert(std::vector<std::string> instruments) {
-            std::ranges::transform(instruments, instruments.begin(), [](const std::string& symbol) {
-                if (symbol.size() > 8) throw std::invalid_argument("Symbol too long: " + symbol);
-                return symbol.size() < 8 ? utils::pad(symbol, 8, ' ') : symbol;
-            });
-            std::unordered_set<std::string_view> seen;
-            for (const auto& symbol : instruments) // verify if all elements are uniqe
-                if (!seen.insert(symbol).second) throw std::invalid_argument("Duplicate symbol in instruments: " + symbol);
-            std::set<char> character_table;
-            for (const auto& symbol : instruments) for (char c : symbol)
-                character_table.insert(c);
-        
-            std::stringbuf buf;
-            std::ostream os(&buf);
-            for (char c : character_table) os << "'" << c << "',";
-            TRACE << "size:" << character_table.size() << " {" << buf.str() << "}" << std::endl;
+            std::unordered_set<std::string> seen;
+            flatmap.reserve(flatmap.size() + instruments.size());
+            for (const auto& entry : flatmap)
+                seen.insert(utils::base64::decode(entry).first);
 
-            flat_map.reserve(flat_map.size() + instruments.size());
-            for (const std::string& symbol : instruments)
-                flat_map.emplace_back( utils::base64::encode(symbol, flat_map.size()));
-            std::ranges::sort(flat_map);
+            for (std::string symbol : instruments) {
+                symbol = utils::pad(symbol, 8, ' ');
+                if (symbol.size() > 8 || !seen.insert(symbol).second) continue;
+                flatmap.emplace_back(utils::base64::encode(symbol, flatmap.size()));
+            }
+            std::ranges::sort(flatmap);
         }        
         contract_t find_or_insert(uint64_t iex_symbol) {
             uint64_t base64_encoded_symbol, n_instruments;
@@ -114,12 +105,12 @@ namespace io::base {
             } catch (const std::runtime_error& err){
                 ERROR << err.what() << " |" <<  utils::iex_symbol(iex_symbol) <<"|" << std::endl;
             }
-            if( auto it = std::ranges::lower_bound(flat_map, base64_encoded_symbol); it != flat_map.end()) {
+            if( auto it = std::ranges::lower_bound(flatmap, base64_encoded_symbol); it != flatmap.end()) {
                 if((base64_encoded_symbol & SYMBOL_MASK) == (*it & SYMBOL_MASK))
                     return *it & CONTRACT_ID_MASK;
-                else flat_map.insert(it, base64_encoded_symbol | flat_map.size());
-            } else flat_map.emplace_back(base64_encoded_symbol | flat_map.size());
-            n_instruments = flat_map.size();
+                else flatmap.insert(it, base64_encoded_symbol | flatmap.size());
+            } else flatmap.emplace_back(base64_encoded_symbol | flatmap.size());
+            n_instruments = flatmap.size();
 
             resize(T, n_instruments);
             return n_instruments - 1;
@@ -137,7 +128,12 @@ namespace io::base {
                 rts = static_cast<derived*>(this)->on_session_begin(start, interval, stop);
             } else rts = utils::sequence<std::chrono::seconds>(start, interval, stop);
 
-            std::tie(original_contract_size, T) = std::make_tuple(flat_map.size(), rts.size() - 1);
+            std::tie(original_contract_size, T) = std::make_tuple(flatmap.size(), rts.size() - 1);
+            std::unordered_set<std::string> seen;
+            for(uint64_t contract: flatmap) {
+                std::string symbol = utils::base64::decode(contract).first;
+                if(!seen.insert(symbol).second) THROW_RUNTIME_ERROR("duplicate symbol has been detected:" + symbol);
+            }
         }
         void session_end() {
             using namespace std::chrono;
@@ -158,7 +154,7 @@ namespace io::base {
         duration start, stop, interval;
         std::vector<std::string> rts, trading_days;
         bool is_irts_enabled, is_rts_enabled;
-        std::vector<uint64_t> flat_map;
+        std::vector<uint64_t> flatmap;
         static constexpr contract_t MAX_CONTRACT_ID     = (1 << 16) - 1;
         static constexpr uint64_t SYMBOL_MASK           = ~uint64_t{0xFFFF};  // upper 48 bits
         static constexpr uint64_t CONTRACT_ID_MASK      = 0xFFFF;             // lower 16 bits
