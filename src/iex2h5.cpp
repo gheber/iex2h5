@@ -17,7 +17,6 @@
 #include <hdf5.hpp>
 #include <csv.hpp>
 #include <base64.hpp>
-#include <threadpool.hpp>
 #include <io.hpp>
 #include <licenses.hpp>
 #include <global_state.hpp>
@@ -31,8 +30,6 @@ void signal_handler(int signal) {
 }
 
 int main(int argc, char **argv) {
-	namespace fs = std::filesystem;
-	namespace ch = std::chrono;
 	using std::cout, std::cerr, std::endl;
 	
 	std::string output_path_or_url, rts_path, instruments_path, trading_days_path, days, interval, time_range, date_range, convert, benchmark_format,

@@ -6,8 +6,8 @@
 #pragma once
 #include "consumers.hpp"
 #include <fstream>
-#include <iomanip>
 #include <filesystem>
+#include <stdexcept>
 
 namespace io::csv {
     struct consumer_t : public io::base::consumer_t<consumer_t> {
@@ -90,7 +90,7 @@ namespace io::csv {
         void on_day_end(time_point day) try {
             if (ofs.is_open()) ofs.close();
             std::cout << " ✓" << std::endl;
-        } catch(const h5::error::any& err){
+        } catch(const std::runtime_error& err){
             ERROR << err.what() << std::endl;
             std::cout << " ✗" << std::endl;
         }

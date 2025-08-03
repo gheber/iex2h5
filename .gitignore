@@ -42,7 +42,9 @@
 *.json
 docs/html/
 data
-.vascode/
+.vscode/
+.cache/
+compile_commands.json
 
 src/iex2h5
 

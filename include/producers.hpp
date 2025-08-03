@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include "consumers.hpp"
 #include "tick.hpp"
 #include <chrono>
 #include <cstdint>
@@ -123,7 +122,8 @@ namespace io::stream {
 			size_t available = decompressed_end - decompressed_pos;
 			size_t n = std::min(len, available);
 			std::memcpy(dst, decompressed_buffer.data() + decompressed_pos, n);
-			std::rewind(fd);
+			if (std::fseek(fd, 0, SEEK_SET) != 0) 
+				THROW_RUNTIME_ERROR("fseek failed...");
 			return n;
 		}
 

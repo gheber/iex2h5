@@ -44,8 +44,6 @@ namespace io::hdf5 {
         consumer_t(std::string path, std::string rts_path, std::string asset_path, std::string trading_days_path,
             bool is_irts_enabled, bool is_rts_enabled, uint8_t compression_level) : base(is_irts_enabled, is_rts_enabled),
             rts_path(rts_path), asset_path(asset_path), tradingdays_path(trading_days_path) {
-            namespace fs = std::filesystem;
-            namespace ch = std::chrono;
             
 			dcpl = (compression_level != 0) ?  h5::gzip{compression_level} : h5::default_dcpl;
 			try {
@@ -160,7 +158,8 @@ namespace io::hdf5 {
             std::string today = date::format("%F", floor<std::chrono::days>(day));
             if(is_rts_enabled) {
                 for( int i=0; i<avg_trade_count.size(); i++) { // rts
-                    avg_trade_count[i] = trade_count[i] / static_cast<float>( slot );
+                    avg_trade_count[i] = static_cast<float>(
+                        static_cast<double>(trade_count[i]) / static_cast<double>(slot));
                     // not traded assets/instruments have no `time` entries
                     // setting them to `max` is sensible, as it spans 0 length
                     if(start[i].empty()) start[i] = rts.back();
@@ -201,7 +200,7 @@ namespace io::hdf5 {
 				else ds = h5::create<std::string>(fd, tradingdays_path, h5::current_dims{0}, h5::max_dims{H5S_UNLIMITED}, h5::chunk{512}| h5::gzip{9});
 				h5::set_extent(ds, h5::current_dims{active_days.size()});
 				h5::write(ds, active_days, h5::offset{0}, h5::count{active_days.size()});
-			} catch(const h5::error::any& err) {}
+			} catch(const h5::error::any& err) {} // NOLINT(bugprone-empty-catch)
 
 			const auto& all_contracts = flat_map;
 			std::vector<std::string> asset_names(all_contracts.size());
