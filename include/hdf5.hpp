@@ -34,7 +34,6 @@ namespace h5 {
         h5::write(fd, path, data, args...);
     }
 }
-
 namespace io::hdf5 {
     struct consumer_t : public io::base::consumer_t<consumer_t> {
         using base = io::base::consumer_t<consumer_t>;
@@ -105,51 +104,50 @@ namespace io::hdf5 {
                 (is_bid ? 1 << 0 : 0) | (is_trade ? 1 << 1 : 0) | (is_ask ? 1 << 2 : 0);
             h5::append(irts, iex::tick_t {
                 .time = utils::to_ns(now), .price = price, .size = size, .contract_id = contract, .flags = flags });
-            global::state::event_count++;
         }
         
         void on_trade_report(time_point time, contract_t id, float price, uint32_t size, uint8_t ) {
-            if(is_rts_enabled)
-                h5_trade_volume(slot, id) += size,
-                ftrade(time, id, price, size);           
-            
-            trade_size[id] += size;
-            trade_count[id]++;
-            event_count[id]++;
+            if(is_rts_enabled){
+                h5_trade_volume(slot, id) = h5_trade_volume(slot, id) + size;
+                ftrade(time, id, price, size);
+            }
             if(is_irts_enabled) append(time, id, price, size, false, true, false); 
+            trade_size[id] += size; trade_count[id]++; event_count[id]++; global::state::event_count++;
         }
 
         void on_ask(time_point time, contract_t id, float price, uint32_t size, uint8_t flag) {
             if(is_rts_enabled)
                 h5_ask_volume(slot, id) += size,
                 fask(time, id, price, size);
-            event_count[id]++;
-            if(is_irts_enabled) append(time, id, price, size, false, false, true); 
+            if(is_irts_enabled) append(time, id, price, size, false, false, true);
+            event_count[id]++, global::state::event_count++;
         }
         void on_bid(time_point time, contract_t id, float price, uint32_t size, uint8_t flag) {
             if(is_rts_enabled)
                 h5_bid_volume(slot, id) += size,
                 fbid(time, id, price, size);
-            event_count[id]++;
-            if(is_irts_enabled) append(time, id, price, size, true, false, false); 
+            if(is_irts_enabled) append(time, id, price, size, true, false, false);
+            event_count[id]++, global::state::event_count++;
         }
     
         void on_heart_beat(time_point time) {
             auto tp = date::format("%H:%M:%S", date::floor<std::chrono::seconds>(time));
             std::cout << clear << status << " " << tp << std::flush;
             if(!is_rts_enabled) return;
-            h5_ask(slot, arma::span::all) = fask.predict(), h5_bid(slot, arma::span::all) = fbid.predict();
-            h5_trade(slot, arma::span::all) = ftrade.predict();
-            for (arma::uword i = 0; i < I; ++i) {
-                float& trade = h5_trade(slot, i);
-                const auto [ask, bid] = std::tuple{h5_ask(slot, i), h5_bid(slot, i)};
-            
-                if (trade == 0 && ask > 0 && bid > 0)
-                    trade = bid + 0.5f * (ask - bid);
-            
-                if (trade > 0)
-                    start[i].length() == 0 ? start[i] = tp : stop[i] = tp;
+            arma::frowvec asks = fask.predict(), trades = ftrade.predict(), bids = fbid.predict();
+            // make certain trades(price) is sandwitched between ask and bid:
+            for (arma::uword i = 0; i < I; ++i) { 
+                if (trades(i) > 0.0f) start[i].length() == 0 ? start[i] = tp : stop[i] = tp;
+                if (trades(i) == 0.0f && asks(i) > 0.0f && bids(i) > 0.0f)
+                    trades(i) = bids(i) + 0.5f * (asks(i) - bids(i));
+                if (trades(i) < bids(i) || trades(i) > asks(i)) {
+                    if (asks(i) > 0.0f && bids(i) > 0.0f && asks(i) > bids(i))
+                        trades(i) = bids(i) + 0.5f * (asks(i) - bids(i));
+                }
             }
+
+            h5_ask(slot, arma::span::all) = asks, h5_bid(slot, arma::span::all) = bids,
+            h5_trade(slot, arma::span::all) = trades;
             slot++;        
         }
         

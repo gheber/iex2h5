@@ -8,7 +8,6 @@
 #include <fstream>
 #include <filesystem>
 #include <stdexcept>
-
 namespace io::csv {
     struct consumer_t : public io::base::consumer_t<consumer_t> {
         using base = io::base::consumer_t<consumer_t>;
@@ -57,7 +56,7 @@ namespace io::csv {
                     status = iex::compat::format("▪ {}", start_time);
                 }
                 ofs << "time,contract_id,price,size,is_bid,is_trade,is_ask\n";
-            } catch (const h5::error::any& err) {
+            } catch (const std::runtime_error& err) {
                 ERROR << err.what() << std::endl;
                 status = iex::compat::format("⯑ {}", start_time);
             }
@@ -69,7 +68,6 @@ namespace io::csv {
             auto ns_since_epoch = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
             ofs << ns_since_epoch << ',' << contract << ',' << price << ',' << size << ','
                 << is_bid << ',' << is_trade << ',' << is_ask << '\n';
-            ++counter;
             global::state::event_count++;          
         }
         
@@ -133,7 +131,6 @@ namespace io::csv {
             }
         }
 
-        uint64_t slot, max_slot, counter = 0;
     private:
         std::ofstream ofs;
         std::string asset_path, tradingdays_path, today, dir, filename;

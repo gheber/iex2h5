@@ -28,12 +28,15 @@ sudo cmake --install build
 
 | Conversion   | Time<br>(ms) | Throughput<br>(M ticks/s) | Latency<br>(µs/tick) | Data IN<br>(GiB) | Data OUT<br>(GiB) |
 |--------------|-------------:|---------------------------:|---------------------:|-----------------:|------------------:|
-| HDF5 → HDF5  | 1 062        | 57.39                      | 0.017                | 4.90             | 1.36              |
-| PCAP → HDF5  | 4 873        | 12.51                      | 0.079                | 4.87             | 1.36              |
-| HDF5 → CSV   | 34 607       | 1.76                       | 0.567                | 4.90             | 2.32              |
-| PCAP → CSV   | 36 408       | 1.67                       | 0.597                | 4.87             | 2.32              |
-| HDF5 → JSON  | 56 814       | 1.10                       | 0.567                | 4.90             | 6.74              |
-| PCAP → JSON  | 65 941       | 0.90                       | 1.081                | 4.87             | 6.74              |
+| HDF5 → HDF5  |   1 062      | 57.39                      | 0.017                | 1.36             | 1.36              |
+| PCAP → HDF5  |   4 873      | 12.51                      | 0.079                | 4.87             | 1.36              |
+| HDF5 → CSV   |  34 607      | 1.76                       | 0.567                | 1.36             | 2.32              |
+| PCAP → CSV   |  36 408      | 1.67                       | 0.597                | 4.87             | 2.32              |
+| HDF5 → JSON  |  56 814      | 1.10                       | 0.567                | 1.36             | 6.74              |
+| HDF5 → REDIS |  62 307      | 0.98                       | 1.022                | 1.36             | 3.50              |
+| PCAP → JSON  |  65 941      | 0.90                       | 1.081                | 4.87             | 6.74              |
+| PCAP → REDIS |  69 337      | 0.88                       | 1.131                | 4.87             | 3.10              |
+
 
 **Notes:**
 - These quick‑and‑dirty measurements were taken on burst inputs and don’t reflect real‑world probabilistic sampling under sustained data flow.
@@ -70,11 +73,11 @@ Optional arguments:
 
 
 Examples:
-   ./build/iex2h5 -o ~/iex.h5 -c irts ~/data/202{4,5}-{04,05}-??.pcap.gz # Convert gzipped PCAP files to IRTS (brace expansion and globs supported)
-   ./build/iex2h5 -o rts.h5  --time-interval 00:00:10 -c rts iex.h5      # Load IRTS from HDF5 and convert to RTS matrices at 10-seconds intervals
-   ./build/iex2h5 -o ~/iex.h5 -c irts ~/data/**/*.pcap                   # Convert plain PCAP files to IRTS tickdata and store in HDF5 format
-   ./build/iex2h5 -o ~/out.csv -c irts ~/data/**/*.pcap                  # Convert plain PCAP files to IRTS tickdata and store in directory of CSV files
-   ./build/iex2h5 -o rts.h5  --time-interval 00:05:00 -c rts *.pcap.gz   # Load IRTS from HDF5 and convert to RTS matrices at 5-minutes intervals
+  iex2h5 -o ~/iex.h5 -c irts ~/data/202{4,5}-{04,05}-??.pcap.gz # Convert gzipped PCAP files to IRTS (brace expansion and globs supported)
+  iex2h5 -o rts.h5  --time-interval 00:00:10 -c rts iex.h5      # Load IRTS from HDF5 and convert to RTS matrices at 10-seconds intervals
+  iex2h5 -o ~/iex.h5 -c irts ~/data/**/*.pcap                   # Convert plain PCAP files to IRTS tickdata and store in HDF5 format
+  iex2h5 -o ~/out.csv -c irts ~/data/**/*.pcap                  # Convert plain PCAP files to IRTS tickdata and store in directory of CSV files
+  iex2h5 -o rts.h5  --time-interval 00:05:00 -c rts *.pcap.gz   # Load IRTS from HDF5 and convert to RTS matrices at 5-minutes intervals
 
 [iex2h5] Market data © IEX — Investors Exchange. Attribution required. See https://iextrading.com
 Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada   info@vargaconsulting.ca

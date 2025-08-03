@@ -72,7 +72,6 @@ namespace io::json {
                 << "\"is_trade\":" << (is_trade ? "true" : "false") << "," << "\"is_ask\":" << (is_ask ? "true" : "false") << "}\n";
             global::state::event_count++;
         }
-
         
         void on_trade_report(time_point time, contract_t id, float price, uint32_t size, uint8_t ) {
             if(is_irts_enabled) append(time, id, price, size, false, true, false); 
@@ -105,10 +104,10 @@ namespace io::json {
                 std::ofstream fd(path);
 
                 if (!fd) THROW_RUNTIME_ERROR("Failed to open asset file for writing: " + path.string());
-                std::ranges::sort(flat_map, [](uint64_t a, uint64_t b) {
+                std::ranges::sort(flatmap, [](uint64_t a, uint64_t b) {
                     return  (a & CONTRACT_ID_MASK) < (b & CONTRACT_ID_MASK);
                 });
-                for (const auto& contract : flat_map)
+                for (const auto& contract : flatmap)
                     fd << utils::base64::decode(contract).first << std::endl;
                 fd.close();
             } catch (const std::exception& e) {
@@ -120,7 +119,7 @@ namespace io::json {
 
                 auto name = entry.path().filename().string();
                 if (name.size() == 14 && name.ends_with(".json")) {
-                    std::string date = name.substr(0, 10);  // "YYYY-MM-DD"
+                    std::string date = name.substr(0, 10);
                     trading_days.insert(date);
                 }
             }
@@ -134,7 +133,6 @@ namespace io::json {
             }
         }
 
-        uint64_t slot, max_slot;
     private:
         std::ofstream ofs;
         std::string asset_path, tradingdays_path, today, dir, filename;
