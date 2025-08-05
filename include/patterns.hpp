@@ -4,7 +4,9 @@
  * Contact: info@vargaconsulting.ca */
 
 #pragma once
+#include <cstddef>
 #include <cstdint>
+#include <concepts>
 
 namespace iex::system {
 	enum class message: char {

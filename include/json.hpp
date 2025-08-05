@@ -7,8 +7,10 @@
 #include "consumers.hpp"
 #include <fstream>
 #include <filesystem>
+#include <set>
 #include <stdexcept>
-namespace io::csv {
+
+namespace io::json {
     struct consumer_t : public io::base::consumer_t<consumer_t> {
         using base = io::base::consumer_t<consumer_t>;
         using typename base::clock, typename base::duration, typename base::time_point, typename base::contract_t;
@@ -42,20 +44,19 @@ namespace io::csv {
         
             try {
                 std::string today = date::format("%F", floor<days>(day));
-                std::string filename = dir + "/irts/" + today + ".csv";
+                std::string filename = dir + "/irts/" + today + ".json";
                 fs::path filepath(filename);
         
                 if (!fs::exists(filepath)) {
                     fs::create_directories(filepath.parent_path());
                     ofs.open(filepath);
-                    if (!ofs) THROW_RUNTIME_ERROR("Failed to create CSV output: " + filename);
+                    if (!ofs) THROW_RUNTIME_ERROR("Failed to create output: " + filename);
                     status = iex::compat::format("▫ {}", start_time);
                 } else {
                     ofs.open(filepath, std::ios::trunc);
-                    if (!ofs) THROW_RUNTIME_ERROR("Failed to overwrite CSV output: " + filename);
+                    if (!ofs) THROW_RUNTIME_ERROR("Failed to overwrite JSON output: " + filename);
                     status = iex::compat::format("▪ {}", start_time);
                 }
-                ofs << "time,contract_id,price,size,is_bid,is_trade,is_ask\n";
             } catch (const std::runtime_error& err) {
                 ERROR << err.what() << std::endl;
                 status = iex::compat::format("⯑ {}", start_time);
@@ -66,9 +67,10 @@ namespace io::csv {
         
         void append(time_point now, contract_t contract, float price, uint32_t size, bool is_bid, bool is_trade, bool is_ask) {
             auto ns_since_epoch = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
-            ofs << ns_since_epoch << ',' << contract << ',' << price << ',' << size << ','
-                << is_bid << ',' << is_trade << ',' << is_ask << '\n';
-            global::state::event_count++;          
+            ofs << "{" << "\"time\":" << ns_since_epoch << "," << "\"contract_id\":" << contract << ","
+                << "\"price\":" << price << "," << "\"size\":" << size << "," << "\"is_bid\":" << (is_bid ? "true" : "false") << ","
+                << "\"is_trade\":" << (is_trade ? "true" : "false") << "," << "\"is_ask\":" << (is_ask ? "true" : "false") << "}\n";
+            global::state::event_count++;
         }
         
         void on_trade_report(time_point time, contract_t id, float price, uint32_t size, uint8_t ) {
@@ -116,8 +118,8 @@ namespace io::csv {
                 if (!entry.is_regular_file()) continue;
 
                 auto name = entry.path().filename().string();
-                if (name.size() == 14 && name.ends_with(".csv")) {
-                    std::string date = name.substr(0, 10);  // "YYYY-MM-DD"
+                if (name.size() == 14 && name.ends_with(".json")) {
+                    std::string date = name.substr(0, 10);
                     trading_days.insert(date);
                 }
             }
@@ -125,7 +127,7 @@ namespace io::csv {
                 fs::path path(dir + "/" + tradingdays_path);
                 std::ofstream fd(path);
                 if (!fd) THROW_RUNTIME_ERROR("Failed to write trading days index: " + path.string());
-    
+
                 for (const auto& day : trading_days)
                     fd << day << std::endl;
             }

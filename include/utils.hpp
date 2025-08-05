@@ -198,10 +198,8 @@ namespace utils {
         namespace fs = std::filesystem;
         std::vector<std::string> files;
         for (const auto& filename : raw_inputs) {
-            if (filename == "-") 
-                files.emplace_back(filename);  // STDIN
-            else if (fs::is_regular_file(filename)) 
-                files.emplace_back(filename);  // file
+            if (filename == "-" || fs::is_regular_file(filename))
+                files.emplace_back(filename);
             else if (fs::is_directory(filename))
                 for (const auto& entry : fs::directory_iterator(filename)) 
                     if (fs::is_regular_file(entry))

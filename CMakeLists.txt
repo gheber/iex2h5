@@ -9,6 +9,17 @@ cmake_minimum_required(VERSION 3.22.0)
 # Set the project name and specify the required C++ standard
 project(iex2h5 LANGUAGES CXX C)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+  message(WARNING "In-source builds are discouraged. Skipping compile_commands.json symlink.")
+else()
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_SOURCE_DIR}/compile_commands.json
+    RESULT_VARIABLE result
+    OUTPUT_QUIET ERROR_QUIET
+  )
+endif()
+
 # Specify the required C++ standard
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -59,7 +70,7 @@ endif()
 list(APPEND INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/include ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS} )
 list(APPEND LIBS 
   ${HDF5_C_LIBRARIES} ${ZLIB_LIBRARIES} 
-  libargparse libarmadillo libh5cpp libthreadpool libdate
+  libargparse libarmadillo libh5cpp libdate
   libfmt_static libhiredis_static librediscpp_static libzng_static libhdf5_static
   )
 

@@ -9,10 +9,8 @@
 #include <concepts>
 #include <cstdint>
 #include <vector>
-#include <queue>
-#include <chrono>
+#include <deque>
 #include <algorithm>
-#include <limits>
 #include <cassert>
 #include "generics.hpp"
 
@@ -130,8 +128,7 @@ namespace filters {
         void update_impl(time_point, uint64_t stock, float price, uint64_t size) {
             if (this->price(stock) > 0)
                 this->price[stock] = alpha * price + (1.0f - alpha) * this->price[stock];
-            else
-                this->price(stock) = price;
+            else this->price(stock) = price;
         }
 
     private:

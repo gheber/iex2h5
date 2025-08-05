@@ -16,11 +16,12 @@
 #include <consumers.hpp>
 #include <hdf5.hpp>
 #include <csv.hpp>
+#include <redis.hpp>
 #include <base64.hpp>
-#include <threadpool.hpp>
 #include <io.hpp>
 #include <licenses.hpp>
 #include <global_state.hpp>
+#include <json.hpp>
 
 #ifndef IEX_MAX_SYMBOLS
 	#define IEX_MAX_SYMBOLS 1 << 16
@@ -31,12 +32,11 @@ void signal_handler(int signal) {
 }
 
 int main(int argc, char **argv) {
-	namespace fs = std::filesystem;
-	namespace ch = std::chrono;
 	using std::cout, std::cerr, std::endl;
 	
 	std::string output_path_or_url, rts_path, instruments_path, trading_days_path, days, interval, time_range, date_range, convert, benchmark_format,
-		copyright = "Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada   info@vargaconsulting.ca";
+		copyright = "Copyright © 2017–2025 Varga Consulting, Toronto, ON, Canada   info@vargaconsulting.ca",
+		iex_attribution = "\033[1m[iex2h5]\033[0m Market data © IEX — Investors Exchange. Attribution required. See https://iextrading.com";
 
     unsigned compression_level;
 	std::string version( "\033[1m" IEX2H5_SOFTWARE_VERSION "\033[0m" " commit: "  IEX2H5_SOFTWARE_COMMIT_HASH);
@@ -163,7 +163,9 @@ int main(int argc, char **argv) {
 
 			std::map<std::string, std::function<void()>> execute {
 				{"hdf5", io::create<io::hdf5::consumer_t>(files, date, time, interval, output_path_or_url, rts_path, instruments_path, trading_days_path, is_irts_enabled, is_rts_enabled, compression_level)},
-				{"csv", io::create<io::csv::consumer_t>(files, date, time, interval, output_path_or_url, instruments_path, trading_days_path, is_irts_enabled, is_rts_enabled)}					
+				{"csv", io::create<io::csv::consumer_t>(files, date, time, interval, output_path_or_url, instruments_path, trading_days_path, is_irts_enabled, is_rts_enabled)},				
+				{"json", io::create<io::json::consumer_t>(files, date, time, interval, output_path_or_url, instruments_path, trading_days_path, is_irts_enabled, is_rts_enabled)},			
+				{"redis", io::create<io::redis::consumer_t>(files, date, time, interval, output_path_or_url, instruments_path, trading_days_path, is_irts_enabled, is_rts_enabled)}
 			};
 
 
@@ -175,18 +177,16 @@ int main(int argc, char **argv) {
 				gs::total_output_after = utils::path_size(output_path_or_url);
 				uint64_t total_output_difference = gs::total_output_after - gs::total_output_before;
 				std::string benchmark_line = benchmark_format != "csv" ?
-					fmt::format("benchmark: {} events in {}ms  {:.1f} kilo ticks/s, {:.6f} µs/tick latency, {} input converted into {} output",
-						gs::event_count, gs::duration, gs::event_rate / 1e3, gs::event_latency / 1e3, utils::human_readable(gs::total_input), utils::human_readable(total_output_difference)) 
+					fmt::format("benchmark: {} events in {}ms  {:.1f} Mticks/s, {:.6f} µs/tick latency, {} input converted into {} output",
+						gs::event_count, gs::duration, gs::event_rate / 1e6, gs::event_latency / 1e3, utils::human_readable(gs::total_input), utils::human_readable(total_output_difference)) 
 					: fmt::format("{},{},{},{},{},{},{},{},{},{},{},{},{}",
 						convert, dispatch, gs::instrument_count, gs::rts_count, gs::event_count, gs::duration, gs::event_rate, gs::event_latency, gs::total_input,
 						total_output_difference, compression_level, time_range, date_range);
 				cerr << benchmark_line << endl;
 
-				cout << "\033[1m[iex2h5]\033[0m Conversion complete — all files processed successfully \n"
-				"\033[1m[iex2h5]\033[0m Market data © IEX — Investors Exchange. Attribution required. See https://iextrading.com" << endl;
+				cout << "\033[1m[iex2h5]\033[0m Conversion complete — all files processed successfully \n" << iex_attribution << std::endl;
 			} catch (const global::shutdown_exception& ex){
-				cout << "\n\033[1m[iex2h5]\033[0m Conversion interrupted \n"
-				"\033[1m[iex2h5]\033[0m Market data © IEX — Investors Exchange. Attribution required. See https://iextrading.com" << endl;				
+				cout << "\n\033[1m[iex2h5]\033[0m Conversion interrupted \n" << iex_attribution << std::endl;
 			}
 		}
 	} catch( const std::exception& err ) {
