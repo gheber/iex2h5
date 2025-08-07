@@ -123,7 +123,7 @@ namespace io::base {
                 gs::total_output_after, gs::total_output_delta, gs::date_count, gs::rts_count, gs::instrument_count);
 
             if constexpr (requires(derived d) { 
-                { d.on_session_begin(start, interval, stop) } -> std::same_as<std::vector<duration>>;
+                { d.on_session_begin(start, interval, stop) } -> std::same_as<std::vector<std::string>>;
             }) {
                 rts = static_cast<derived*>(this)->on_session_begin(start, interval, stop);
             } else rts = utils::sequence<std::chrono::seconds>(start, interval, stop);
