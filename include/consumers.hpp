@@ -128,7 +128,7 @@ namespace io::base {
                 rts = static_cast<derived*>(this)->on_session_begin(start, interval, stop);
             } else rts = utils::sequence<std::chrono::seconds>(start, interval, stop);
 
-            std::tie(original_contract_size, T) = std::make_tuple(flatmap.size(), rts.size() - 1);
+            std::tie(original_contract_size, T) = std::make_tuple(flatmap.size(), rts.size());
             std::unordered_set<std::string> seen;
             for(uint64_t contract: flatmap) {
                 std::string symbol = utils::base64::decode(contract).first;
