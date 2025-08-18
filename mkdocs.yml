@@ -11,10 +11,26 @@ nav:
     - Profileing: profile.md 
     - Download Demo: download-demo.md
 theme:
-    name: material
-    include_sidebar: true
-    custom_dir: docs/overrides
-    highlightjs: true
+  name: material
+  custom_dir: docs/overrides
+  highlightjs: true
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.instant
+    - search.suggest
+    - content.code.copy
+  palette:
+    - scheme: solarized
+      primary: orange
+      toggle:
+        icon: material/lightbulb
+        name: Switch to dark mode
+    - scheme: slate
+      primary: orange
+      toggle:
+        icon: material/lightbulb-outline
+        name: Switch to light mode
 
 markdown_extensions:
   - pymdownx.highlight
@@ -32,4 +48,5 @@ extra_javascript:
   - https://cdn.jsdelivr.net/npm/asciinema-player@3.0.1/dist/bundle/asciinema-player.js
 
 extra_css:
+  - styles/custom.css
   - https://cdn.jsdelivr.net/npm/asciinema-player@3.0.1/dist/bundle/asciinema-player.css
