@@ -17,7 +17,7 @@
 #include <hdf5.hpp>
 #include <csv.hpp>
 #include <redis.hpp>
-#include <base64.hpp>
+#include <radix64.hpp>
 #include <io.hpp>
 #include <licenses.hpp>
 #include <global_state.hpp>

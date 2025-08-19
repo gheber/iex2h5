@@ -93,7 +93,7 @@ namespace io::redis {
                     return (a & CONTRACT_ID_MASK) < (b & CONTRACT_ID_MASK);
                 });
                 for (const auto& contract : flatmap) {
-                    auto [symbol, ok] = utils::base64::decode(contract);
+                    auto [symbol, ok] = utils::radix64::decode(contract);
                     if (ok) {
                         redis->sadd(asset_path, symbol);
                     }
