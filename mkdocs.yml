@@ -15,9 +15,7 @@ theme:
   custom_dir: docs/overrides
   highlightjs: true
   features:
-    - navigation.tabs
-    - navigation.sections
-    - navigation.instant
+    #- navigation.instant <- messes up mathjax, keep it disabled!
     - search.suggest
     - content.code.copy
   palette:
