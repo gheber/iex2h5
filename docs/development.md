@@ -105,7 +105,8 @@ You can preview and edit the documentation locally.
 
 ```bash
 pipx install mkdocs
-pipx inject mkdocs mkdocs-material
+pipx inject mkdocs mkdocs-material mkdocs-asciinema-player
+pipx runpip mkdocs list
 ````
 
 If you don’t have `pipx`:
@@ -113,33 +114,13 @@ If you don’t have `pipx`:
 python3 -m pip install --user pipx
 python3 -m pipx ensurepath
 ```
-
-### Option 2: Local virtual environment
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install mkdocs mkdocs-material
-```
-
 ### Live Preview
 
 ```bash
-mkdocs serve
+mkdocs serve --dev-addr=127.0.0.1:9000
 ```
 
-Then open: [http://127.0.0.1:8000](http://127.0.0.1:8000)
-
-### Project Layout
-
-```
-docs/
-├── index.md
-├── usage.md
-├── file-format.md
-├── development.md
-└── spec/*.pdf
-```
+Then open: [http://127.0.0.1:8000](http://127.0.0.1:9000)
 
 ### Custom Theme Overrides
 
@@ -159,4 +140,5 @@ Customize these to match your branding and style.
 - Use `snake_case` and postfix types with `_t`.
 - Ensure all changes compile cleanly with `-Wall -Wextra -Werror`.
 - Document any public-facing or structural changes under `docs/`.
+
 ```

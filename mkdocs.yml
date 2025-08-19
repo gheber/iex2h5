@@ -1,15 +1,15 @@
 site_name: IEX2H5
 docs_dir: docs
-
 nav:
-    - Introduction: index.md
-    - Development: development.md
-    - Consumers: consumers.md
-    - Generics: generics.md
-    - Backtesting: backtesting.md
-    - File Format: file-format.md
-    - Profileing: profile.md 
-    - Download Demo: download-demo.md
+  - Overview: overview.md
+  - Guide: guide.md
+  - Data Layout: layout.md
+  - Symbols: 
+    - Flat Maps: flatmap.md
+    - Compression: instruments-compression.md
+    - Radix64 Encoding: radix64.md 
+  - Credits: credits.md
+
 theme:
   name: material
   custom_dir: docs/overrides
@@ -29,21 +29,47 @@ theme:
       toggle:
         icon: material/lightbulb-outline
         name: Switch to light mode
+extra:
+  social:
+    - icon: simple/x
+      link: https://x.com/vargaconsulting 
+    - icon: simple/reddit
+      link: https://www.reddit.com/user/vargaconsulting/submitted/
+    - icon: simple/substack
+      link: https://substack.com/@vargaconsulting
+    - icon: simple/medium
+      link: https://medium.com/@steven.varga      
+    - icon: fontawesome/brands/github
+      link: https://github.com/orgs/vargaconsulting/repositories
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/in/steven-varga-04224a19/
 
 markdown_extensions:
-  - pymdownx.highlight
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
   - pymdownx.inlinehilite
+  - pymdownx.snippets
   - pymdownx.superfences
-  - codehilite:
-      guess_lang: false
-      linenums: false
+  - pymdownx.keys
   - footnotes
-  - toc:
-      permalink: "#"
-      separator: "-"
-
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.blocks.caption
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.tilde  
+  - attr_list
+  - md_in_html
+plugins:
+  - search
+  - asciinema-player
+    
 extra_javascript:
   - https://cdn.jsdelivr.net/npm/asciinema-player@3.0.1/dist/bundle/asciinema-player.js
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
 
 extra_css:
   - styles/custom.css
