@@ -204,7 +204,7 @@ namespace io::hdf5 {
 			std::vector<std::string> asset_names(all_contracts.size());
 			TRACE << "instruments: " << all_contracts.size() << std::endl;
 			for(uint64_t contract: all_contracts) {
-				auto[symbol, index] = utils::base64::decode(contract);
+				auto[symbol, index] = utils::radix64::decode(contract);
 				if(index >= asset_names.size())
 					throw std::runtime_error("Decoded index out of bounds.");
 				asset_names[index] = utils::trim(symbol);

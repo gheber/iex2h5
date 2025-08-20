@@ -108,7 +108,7 @@ namespace io::json {
                     return  (a & CONTRACT_ID_MASK) < (b & CONTRACT_ID_MASK);
                 });
                 for (const auto& contract : flatmap)
-                    fd << utils::base64::decode(contract).first << std::endl;
+                    fd << utils::radix64::decode(contract).first << std::endl;
                 fd.close();
             } catch (const std::exception& e) {
                 ERROR << "Failed to write asset file: " << e.what() << '\n';

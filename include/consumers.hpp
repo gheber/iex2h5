@@ -19,7 +19,7 @@
 #include <filters.hpp>
 #include <compat.hpp>
 #include <utils.hpp>
-#include <base64.hpp>
+#include <radix64.hpp>
 #include <iex.hpp>
 #include <global_state.hpp>
 
@@ -89,27 +89,27 @@ namespace io::base {
             std::unordered_set<std::string> seen;
             flatmap.reserve(flatmap.size() + instruments.size());
             for (const auto& entry : flatmap)
-                seen.insert(utils::base64::decode(entry).first);
+                seen.insert(utils::radix64::decode(entry).first);
 
             for (std::string symbol : instruments) {
                 symbol = utils::pad(symbol, 8, ' ');
                 if (symbol.size() > 8 || !seen.insert(symbol).second) continue;
-                flatmap.emplace_back(utils::base64::encode(symbol, flatmap.size()));
+                flatmap.emplace_back(utils::radix64::encode(symbol, flatmap.size()));
             }
             std::ranges::sort(flatmap);
         }        
         contract_t find_or_insert(uint64_t iex_symbol) {
-            uint64_t base64_encoded_symbol, n_instruments;
+            uint64_t radix64_encoded_symbol, n_instruments;
             try {
-                base64_encoded_symbol = utils::base64::encode(iex_symbol, 0);
+                radix64_encoded_symbol = utils::radix64::encode(iex_symbol, 0);
             } catch (const std::runtime_error& err){
                 ERROR << err.what() << " |" <<  utils::iex_symbol(iex_symbol) <<"|" << std::endl;
             }
-            if( auto it = std::ranges::lower_bound(flatmap, base64_encoded_symbol); it != flatmap.end()) {
-                if((base64_encoded_symbol & SYMBOL_MASK) == (*it & SYMBOL_MASK))
+            if( auto it = std::ranges::lower_bound(flatmap, radix64_encoded_symbol); it != flatmap.end()) {
+                if((radix64_encoded_symbol & SYMBOL_MASK) == (*it & SYMBOL_MASK))
                     return *it & CONTRACT_ID_MASK;
-                else flatmap.insert(it, base64_encoded_symbol | flatmap.size());
-            } else flatmap.emplace_back(base64_encoded_symbol | flatmap.size());
+                else flatmap.insert(it, radix64_encoded_symbol | flatmap.size());
+            } else flatmap.emplace_back(radix64_encoded_symbol | flatmap.size());
             n_instruments = flatmap.size();
 
             resize(T, n_instruments);
@@ -123,15 +123,15 @@ namespace io::base {
                 gs::total_output_after, gs::total_output_delta, gs::date_count, gs::rts_count, gs::instrument_count);
 
             if constexpr (requires(derived d) { 
-                { d.on_session_begin(start, interval, stop) } -> std::same_as<std::vector<duration>>;
+                { d.on_session_begin(start, interval, stop) } -> std::same_as<std::vector<std::string>>;
             }) {
                 rts = static_cast<derived*>(this)->on_session_begin(start, interval, stop);
             } else rts = utils::sequence<std::chrono::seconds>(start, interval, stop);
 
-            std::tie(original_contract_size, T) = std::make_tuple(flatmap.size(), rts.size() - 1);
+            std::tie(original_contract_size, T) = std::make_tuple(flatmap.size(), rts.size());
             std::unordered_set<std::string> seen;
             for(uint64_t contract: flatmap) {
-                std::string symbol = utils::base64::decode(contract).first;
+                std::string symbol = utils::radix64::decode(contract).first;
                 if(!seen.insert(symbol).second) THROW_RUNTIME_ERROR("duplicate symbol has been detected:" + symbol);
             }
         }
