@@ -63,3 +63,5 @@ site/
 /*.xml
 
 include/licenses.hpp
+
+examples/python/__pycache__/
