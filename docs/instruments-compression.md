@@ -7,11 +7,11 @@ The `radix64.hpp` header implements a highly compact encoding scheme for symbol 
 > **Terminology.** We use “**radix-64**” to mean a positional numeral system with base 64 over a chosen alphabet $\Sigma$ (6-bit digits, big-endian). This is **not** RFC 4648 Base64 encoding of bytes.
 
 
-## 🧱 Overview
+## :material-view-grid:{.icon} Overview
 ![memory layout](assets/radix64-encoding-layout.png#float-right-30)
 Each IEX symbol is exactly 8 characters (right-padded to length with the **minimum-code** sentinel, e.g., space with code 0), drawn from a radix-64 alphabet (A–Z, 0–9, selected punctuation), and stored in a compact 64-bit key with the symbol packed **big-endian** into the upper 48 bits (8×6) and a 16-bit contract index in the lower 16 bits; this order-preserving, reversible layout is **space-efficient** (symbol + index in 8 bytes), enables **fast lookup** as a single `uint64_t` key in sorted vectors or flat hash maps, and supports **one-pass decode** without heap allocation—note that at most **8** radix-64 characters fit in 48 bits.
 
-# Radix 64 Symbol Encoding for IEX2H5
+# :material-exponent:{.icon} Radix 64 Symbol Encoding for IEX2H5
 ![memory layout](assets/symbol-memory-layout.png#float-right-30)
 The IEX specification uses 8-byte padded ASCII strings (left-aligned, space-padded) to represent symbols (e.g. `"AAPL    "`). Within the IEX protoicol (internally in the pcap format) they’re stored in `uint64_t`. To give you an example the memory Layout of `"APPLE   "` (Little Endian)
 is `"APPLE␣␣␣"` — 8 characters, padded with spaces. The resulting `uint64_t` value (in hex):`0x202020454C505041`
@@ -22,7 +22,7 @@ is `"APPLE␣␣␣"` — 8 characters, padded with spaces. The resulting `uint6
 ```
 Paper vs Memory might defeat intuition leading to a number ordering confusion on little endian platforms. Humans write numbers (and symbols) **left-to-right**, from the **most significant** to **least significant** digit. Memory in little-endian CPUs stores values **from the least significant byte first**.
 
-## 🧮 Bit Budget Analysis (48-bit) and  radix64 Alphabet
+## :fontawesome-solid-sack-dollar:{.icon} Bit Budget Analysis (48-bit) and  radix64 Alphabet
 ![memory layout](assets/radix64-alphabet.png#float-left-40)
 We allocate **48 bits** for symbol/string encoding, leaving **16 bits** for indexing them. Let \(b\) be the number of bits per character. To store **8 characters** in 48 bits we have  \(b = \frac{48}{8} = 6.00\) available bits per character, similarly if we wanted to store **9 characters** we have to squeeze each character into:  \(b = \frac{48}{9} \approx 5.33\) bits. Since fractional bits would make our day misarable we have to settle with \( \left\lfloor 5.33 \right\rfloor = 5\). So it is a tossup between 5 or 6 bits. 
 
@@ -32,7 +32,7 @@ $$
 $$
 **Conclusion:** A **base-64 alphabet** lets us encode exactly **8 characters in 48 bits** — with 30 extra characters to make it applicable for encoding tickers of other exchanges.
 
-##  Compact radix64 Encoding of Ticker + Index Ordering Properties
+## :octicons-light-bulb-24:{.icon} Compact radix64 Encoding of Ticker + :material-order-alphabetical-ascending:{.icon} Index Ordering Properties
 ![memory layout](assets/radix64-order.png#float-right-40)
 
 When encoding ticker symbols using 6-bit characters (i.e. a base-64 alphabet), we concatenate the character codes to form a single base-64 number. Because the encoding alphabet is lexicographically ordered, this process preserves the relative order of the original strings.
@@ -41,7 +41,7 @@ As a result, comparisons between encoded tickers can be performed using fast int
 The table on the right compares the original input order, decoded symbol, the index from `original[i]`, and the lexicographically sorted symbol/index from `sorted[i]`.
 Correct lexicographic behavior is preserved when using the fixed radix64 encoding logic.
 
-## Binary Search in radix64-Encoded Flat Maps
+## :material-text-search:{.icon} Binary Search in radix64-Encoded Flat Maps
 
 The `encode(symbol)` function preserves lexical order, making it ideal for binary search over sorted containers. For example:
 
@@ -71,7 +71,7 @@ if (auto it = std::ranges::lower_bound(sorted, utils::radix64::encode("ocean"));
 }
 ```
 
-## Why “radix-64” ? 
+## Why “Radix-64” ? 
 Short version: I called it **radix-64** because we are using a **positional numeral system in base 64** (6-bit digits) over a custom, ordered alphabet—**not** the RFC 4648 **Base64** byte codec. 
 
 

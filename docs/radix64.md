@@ -1,19 +1,19 @@
-# Order-Preserving Radix-64 Encoding
+# :material-exponent-box:{.icon} Order-Preserving Radix-64 Encoding [^1]
 
-**Terminology.** Here “radix-64” means a positional numeral system in base $64$ over a chosen, ordered alphabet $\Sigma$. This is **not** the [RFC 4648][100] “Base64” byte codec.
+**Terminology.** Here “Radix-64” means a positional numeral system in base $64$ over a chosen, ordered alphabet $\Sigma$. This is **not** the [RFC 4648][100] “Base64” byte codec.
 
-## Alphabet and code map
+## :material-alphabetical-variant:{.icon} Alphabet and code map
 
 Let \( (A,\le_A) \) be a totally ordered finite alphabet of size \( |A|\le 64\).
 Choose a **monotone** (order-embedding) code map \( \sigma:A\to\{0,\dots,63\},\qquad
 a\le_A b \;\Rightarrow\; \sigma(a)\le \sigma(b). \) (Injective and order-preserving is ideal; ties collapse symbols.)
 
-## Encoding fixed-length strings
+## :material-format-size:{.icon} Encoding fixed-length strings
 
 For $N$-character strings $s=s_0s_1\ldots s_{N-1}\in A^N$, define the **big-endian** radix-64 integer \(
 E(s)\;=\;\sum_{i=0}^{N-1}\sigma(s_i)\,64^{\,N-1-i}. \tag{1} \) This treats the first character as the **most-significant 6-bit digit**.
 
-### Order equivalence
+### :fontawesome-solid-equals:{.icon} Order equivalence
 
 Let $x,y\in A^N$ and let $k$ be the first index where they differ. Then
 
@@ -31,7 +31,7 @@ $$
 
 So **unsigned integer comparison** of $E(\cdot)$ is exactly lexicographic comparison on $A^N$.
 
-## Variable length via padding
+## :fontawesome-solid-down-left-and-up-right-to-center:{.icon} Variable length via padding
 
 For variable-length strings, pick a **sentinel** $p\in A$ with the **smallest code** $\sigma(p)=0$ and pad right to a common length $N$:
 
@@ -41,7 +41,7 @@ $$
 
 Then (2) continues to hold **and** prefixes sort before their extensions (e.g., “A” < “AA”).
 
-## Bit budget (48-bit symbol + 16-bit index)
+## :fontawesome-solid-sack-dollar:{.icon}  Bit budget (48-bit symbol + 16-bit index)
 
 An $N$-char code occupies exactly $6N$ bits. For $N=8$,
 
@@ -57,7 +57,7 @@ $$
 
 Comparing 64-bit keys $K$ remains order-preserving on the symbol part because the **symbol lives in the upper 48 bits** (MSBs).
 
-## Practical checklist
+## :material-check-all:{.icon} Practical checklist
 
 1. **Monotone $\sigma$.** Respect the chosen alphabet order.
 2. **Fixed length or pad with min-code sentinel.** Ensures prefix ordering.
@@ -65,8 +65,7 @@ Comparing 64-bit keys $K$ remains order-preserving on the symbol part because th
 
 ---
 
-## Minimal C++ helper (order-preserving, big-endian)
-
+## :material-file-code:{.icon} Reference Algorithm for Order-Preserving Radix-64 Encoding
 ```
 # ===============================
 # Radix-64 (order-preserving) spec
@@ -145,6 +144,5 @@ FUNC decode_symbol(E: uint64) -> string:
 
 That’s it: monotone $\sigma$, min-code padding, big-endian digits ⇒ lex order ↔ unsigned integer order, perfectly within a 64-bit key.
 
-**Author:** Steven Varga, 2025 Toronto, ON
-
+[^1]: **Author:** Steven Varga, 2025 Toronto, ON
 [100]: https://datatracker.ietf.org/doc/html/rfc4648

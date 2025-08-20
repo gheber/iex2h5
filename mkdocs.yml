@@ -1,7 +1,7 @@
 site_name: IEX2H5
 docs_dir: docs
 nav:
-  - Overview: overview.md
+  - Overview: index.md
   - Guide: guide.md
   - Data Layout: layout.md
   - Symbols: 
@@ -18,6 +18,8 @@ theme:
     #- navigation.instant <- messes up mathjax, keep it disabled!
     - search.suggest
     - content.code.copy
+  icon:
+  admonition:
   palette:
     - scheme: solarized
       primary: orange
@@ -43,33 +45,42 @@ extra:
       link: https://github.com/orgs/vargaconsulting/repositories
     - icon: fontawesome/brands/linkedin
       link: https://www.linkedin.com/in/steven-varga-04224a19/
-
+  icons:
+    - material
+    - fontawesome/brands
+    - fontawesome/solid
+    
 markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg  
+  - pymdownx.tabbed:
+      alternate_style: true  
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
-  - pymdownx.superfences
-  - pymdownx.keys
-  - footnotes
   - pymdownx.arithmatex:
       generic: true
   - pymdownx.blocks.caption
   - pymdownx.caret
   - pymdownx.mark
   - pymdownx.tilde  
-  - attr_list
-  - md_in_html
-plugins:
-  - search
-  - asciinema-player
+  - pymdownx.critic
+  - pymdownx.keys
     
 extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
   - https://cdn.jsdelivr.net/npm/asciinema-player@3.0.1/dist/bundle/asciinema-player.js
   - javascripts/mathjax.js
-  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
 
 extra_css:
   - styles/custom.css

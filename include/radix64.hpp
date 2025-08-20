@@ -4,7 +4,7 @@
  * Contact: info@vargaconsulting.ca
  *
  * NOTE:
- *   - Implements fixed-width base64 encoding for stock symbols.
+ *   - Implements fixed-width radix64 encoding for stock symbols.
  *   - Encodes up to 8-character symbols into 48 bits using a 64-character alphabet.
  *   - The remaining 16 bits in a uint64_t are reserved for a symbol index (0–65536).
  */
@@ -18,7 +18,7 @@
 #include <stdexcept>
 #include <utility>
 
-namespace utils::base64::impl {
+namespace utils::radix64::impl {
     constexpr uint8_t SYMBOL_BASE = 64;
     constexpr size_t SYMBOL_WIDTH = 8;
     constexpr std::array<char, 64> SYMBOL_ALPHABET = {
@@ -57,7 +57,7 @@ namespace utils::base64::impl {
 
     inline uint64_t encode(const std::string& symbol) {
         if (symbol.size() > SYMBOL_WIDTH)
-            throw std::invalid_argument("symbol too long for base64 encoding");
+            throw std::invalid_argument("symbol too long for radix64 encoding");
         uint64_t raw_symbol = 0;
         std::memcpy(&raw_symbol, symbol.data(), symbol.size());
         return encode(raw_symbol);
@@ -72,9 +72,9 @@ namespace utils::base64::impl {
         }
         return result;
     }
-} // namespace utils::base64::impl
+} // namespace utils::radix64::impl
 
-namespace utils::base64 {
+namespace utils::radix64 {
     using impl::SYMBOL_WIDTH;
  
     inline uint64_t encode(const std::string& symbol, uint16_t index) {
@@ -98,5 +98,5 @@ namespace utils::base64 {
         uint16_t index = encoded & 0xFFFF;
         return {impl::decode(symbol_bits), index};
     }
-} // namespace utils::base64
+} // namespace utils::radix64
  

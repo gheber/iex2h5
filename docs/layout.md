@@ -17,7 +17,7 @@ While the example diagram shows **both IRTS and RTS stored in a single HDF5 file
 
 This design balances long-term archival with real-time analytics, and ensures data remains accessible across languages and platforms without compromising write performance.
 
-### Structure of the RTS Price Matrix
+### :simple-matrix:{.icon} Structure of the RTS Price Matrix
 ![prices](assets/matrix.png#float-left-30)
 The prices matrix shown above has 4290 rows and 10 columns. Each row marks the end of a fixed-duration trading interval — typically aligned with the Close in an OHLC series — while each column corresponds to a different stock or instrument. Column-to-symbol mappings can be reverse-resolved using the accompanying instruments.txt index file. Most cells contain regular price values, but some could be marked as NaN, which stands for “Not a Number.”
 
@@ -25,7 +25,7 @@ In numerical computing, `NaN` (short for *Not a Number*) is a special value used
 
 In general, trades occur between the bid and ask prices. The `price` matrix reflects this relationship: when both bid and ask quotes are present, a **mid-price** is computed by the filtering mechanism and recorded as the representative price. However, these synthetic midpoints are **not included** in the trading statistics — this ensures that only actual executed trades contribute to volume or activity metrics, making it easier to filter out illiquid or infrequently traded instruments.
 
-### Tickdata stream
+### :material-water-pump:{.icon} Tickdata stream
 
 ![prices](assets/tick-struct.png#float-right-30)
 The `tick_t` structure represents the most granular level of market activity in the IEX2H5 system — capturing individual bid/ask quotes and trades as they happen. Each tick includes a high-precision **timestamp** (as recorded by the exchange), the **price**, **size**, and a compact **contract ID** that identifies the security. The final field, `flags`, is a bitfield union that efficiently encodes metadata about the event — indicating whether it’s a bid or ask quote, a trade, or a level removal from the order book.
@@ -41,7 +41,7 @@ In practice, this tick data is stored as a vector of structs — conceptually si
  (time = 0x1858ac06c1e9485a, price = 38.45, size = 0x0000012c, contract_id = 0x0d86, flags = 0x0004)
 ```
 
-### 📈 `/stats/` — Intraday Trade Statistics
+### :material-math-integral:{.icon} `/stats/` — Intraday Trade Statistics
 Summarized metrics for each trading day, useful for sanity checks, feature extraction, or visualization.
 
 | Dataset           | Description                           | Motivation                           |
@@ -53,7 +53,7 @@ Summarized metrics for each trading day, useful for sanity checks, feature extra
 | `trade_size`      | Average trade size                    | Indicator for low or high traded volume |
 
 
-## 🗜️ Compression
+## :fontawesome-solid-compress:{.icon} Compression
 
 The `iex2h5` tool supports **gzip compression levels** from `--gzip 0` (no compression) to `--gzip 9` (maximum). Typical results:
 
@@ -65,7 +65,7 @@ This makes **HDF5 a vastly more efficient archival format** than raw `pcap.gz`, 
 * Dramatic savings on object storage costs (S3, GCS, Azure)
 * Faster network sync and replication
 
-> 📬 Want early access? [Contact me](mailto:info@vargaconsulting.ca) to discuss tailored storage pipelines for your use case.
+> :material-chat-processing:{.pulsate} Want early access? [Contact me](mailto:info@vargaconsulting.ca) to discuss tailored storage pipelines for your use case.
 
 See also:
 
