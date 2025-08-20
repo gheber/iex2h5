@@ -114,7 +114,7 @@ namespace utils {
         using namespace std::chrono;
         auto [b, i, e] = utils::strings_to_duration<duration_t>(begin, interval, end);
         std::vector<std::string> result;
-        for (auto d = b; d <= e; d += i)
+        for (auto d = b + i; d <= e; d += i)
             result.push_back(duration_to_string(d));
         return result;
     }

@@ -123,12 +123,12 @@ namespace io::base {
                 gs::total_output_after, gs::total_output_delta, gs::date_count, gs::rts_count, gs::instrument_count);
 
             if constexpr (requires(derived d) { 
-                { d.on_session_begin(start, interval, stop) } -> std::same_as<std::vector<duration>>;
+                { d.on_session_begin(start, interval, stop) } -> std::same_as<std::vector<std::string>>;
             }) {
                 rts = static_cast<derived*>(this)->on_session_begin(start, interval, stop);
             } else rts = utils::sequence<std::chrono::seconds>(start, interval, stop);
 
-            std::tie(original_contract_size, T) = std::make_tuple(flatmap.size(), rts.size() - 1);
+            std::tie(original_contract_size, T) = std::make_tuple(flatmap.size(), rts.size());
             std::unordered_set<std::string> seen;
             for(uint64_t contract: flatmap) {
                 std::string symbol = utils::base64::decode(contract).first;
