@@ -1,4 +1,8 @@
-site_name: IEX2H5
+site_name: VargaLABS
+site_url: https://steven-varga.ca
+site_description: IEX2H5 — Fast, Structured Conversion from IEX TOPS to HDF5
+site_author: Steven Varga
+copyright: Steven Varga
 docs_dir: docs
 nav:
   - Overview: index.md
@@ -13,42 +17,37 @@ nav:
 theme:
   name: material
   custom_dir: docs/overrides
-  highlightjs: true
   features:
     #- navigation.instant <- messes up mathjax, keep it disabled!
     - search.suggest
     - content.code.copy
+    - content.tooltips    
   icon:
   admonition:
   palette:
     - scheme: solarized
       primary: orange
       toggle:
-        icon: material/lightbulb
+        icon: moon
         name: Switch to dark mode
     - scheme: slate
       primary: orange
       toggle:
-        icon: material/lightbulb-outline
+        icon: sun
         name: Switch to light mode
 extra:
   social:
-    - icon: simple/x
-      link: https://x.com/vargaconsulting 
-    - icon: simple/reddit
-      link: https://www.reddit.com/user/vargaconsulting/submitted/
-    - icon: simple/substack
-      link: https://substack.com/@vargaconsulting
-    - icon: simple/medium
-      link: https://medium.com/@steven.varga      
-    - icon: fontawesome/brands/github
-      link: https://github.com/orgs/vargaconsulting/repositories
-    - icon: fontawesome/brands/linkedin
+    - icon: material/whatsapp
+      link: https://wa.me/16475611829
+    - icon: material/email-fast
+      link: mailto:steven@vargaconsulting.ca
+    - icon: material/twitter
+      link: https://x.com/vargaconsulting
+    - icon: material/linkedin
       link: https://www.linkedin.com/in/steven-varga-04224a19/
-  icons:
-    - material
-    - fontawesome/brands
-    - fontawesome/solid
+    - icon: material/github 
+      link: https://github.com/vargaconsulting
+
   analytics:
     provider: google
     property: G-QC2C4XW904
@@ -58,7 +57,6 @@ markdown_extensions:
   - md_in_html
   - tables
   - footnotes
-  - pymdownx.details
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg  
@@ -68,10 +66,10 @@ markdown_extensions:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
   - pymdownx.arithmatex:
       generic: true
+  - pymdownx.details
+  - pymdownx.superfences
   - pymdownx.blocks.caption
   - pymdownx.caret
   - pymdownx.mark
@@ -80,10 +78,21 @@ markdown_extensions:
   - pymdownx.keys
     
 extra_javascript:
-  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
-  - https://cdn.jsdelivr.net/npm/asciinema-player@3.0.1/dist/bundle/asciinema-player.js
   - javascripts/mathjax.js
+  - javascripts/mathjax-tex-mml-chtml.js
+  - javascripts/tailwind.js
+  - javascripts/tw-config.js
+  - javascripts/asciinema-player.min.js
+  - javascripts/alpine.js
+  - javascripts/popper.js
+  - javascripts/tippy.js
 
 extra_css:
+  - styles/asciinema-player.css
+  - styles/asciinema.css
+  - styles/animate.css
   - styles/custom.css
-  - https://cdn.jsdelivr.net/npm/asciinema-player@3.0.1/dist/bundle/asciinema-player.css
+  - styles/mobile.css
+  - styles/socials.css
+  - styles/background.css
+  - styles/blog.css
