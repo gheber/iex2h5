@@ -6,12 +6,13 @@ copyright: Steven Varga
 docs_dir: docs
 nav:
   - Overview: index.md
+  - Workflow: workflow.md
   - Guide: guide.md
   - Data Layout: layout.md
   - Symbols: 
     - Flat Maps: flatmap.md
     - Compression: instruments-compression.md
-    - Radix64 Encoding: radix64.md 
+    - Radix64 Encoding: radix64.md
   - Credits: credits.md
 
 theme:
@@ -21,7 +22,8 @@ theme:
     #- navigation.instant <- messes up mathjax, keep it disabled!
     - search.suggest
     - content.code.copy
-    - content.tooltips    
+    - content.tooltips
+    - content.tabs.link
   icon:
   admonition:
   palette:
@@ -36,6 +38,7 @@ theme:
         icon: sun
         name: Switch to light mode
 extra:
+  homepage: https://steven-varga.ca/
   social:
     - icon: material/whatsapp
       link: https://wa.me/16475611829
@@ -52,16 +55,14 @@ extra:
     provider: google
     property: G-QC2C4XW904
 markdown_extensions:
+  - md_in_html
   - admonition
   - attr_list
-  - md_in_html
   - tables
   - footnotes
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg  
-  - pymdownx.tabbed:
-      alternate_style: true  
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
@@ -70,6 +71,10 @@ markdown_extensions:
       generic: true
   - pymdownx.details
   - pymdownx.superfences
+  - pymdownx.tabbed:
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
   - pymdownx.blocks.caption
   - pymdownx.caret
   - pymdownx.mark
