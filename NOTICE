@@ -1,7 +1,7 @@
 NOTICE
 
 This software is part of the iex2h5 project,
-developed and maintained by Varga Consulting, Toronto, ON, Canada 🇨🇦.
+developed and maintained by Varga Labs, Toronto, ON, Canada 🇨🇦.
 
 License:
 The source code is licensed under the MIT License.
@@ -20,9 +20,8 @@ violation of academic integrity policies in addition to breaching
 the terms of the license.
 
 Suggested citation:
-    Varga Consulting (2025). *iex2h5: High-performance IEX market data parser and HDF5 persistence toolkit*.  
-    Zenodo. https://doi.org/10.5281/zenodo.15677290
-
+    Steven Varga (2025). *iex2h5: Converting IEX PCAP Market Data into HDF5 for Research and Backtesting*
+    Zenodo. https://doi.org/10.5281/zenodo.15677289
 -------------------------------------------------------------------------------
 
 Third-Party Code:
